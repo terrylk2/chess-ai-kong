@@ -1,0 +1,16 @@
+{
+  "name": "chess-ai-kong",
+  "authors": [
+    "Yannick Kirschhoffer <alcibiade@alcibiade.org>",
+    "Allan Burdajewicz <allan.burdajewicz@gmail.com>"
+  ],
+  "homepage": "https://github.com/ChessCorp/chess-ai-kong",
+  "main": "src/index.js",
+  "ignore": [
+    "/test/"
+  ],
+  "dependencies": {
+  },
+  "devDependencies": {
+  }
+}
