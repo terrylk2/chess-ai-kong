@@ -8,7 +8,7 @@ describe('evaluator', function () {
 
         var position = chessRules.getInitialPosition();
 
-        assert(evaluator.evaluatePosition(position, 'basic') == 0);
+        assert(evaluator.evaluatePosition(position, 'basic') === 0);
     });
 
     it('must provide logical score by central symmetry', function () {
