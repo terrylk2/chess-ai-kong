@@ -34,26 +34,25 @@ function getStrategyPiecesTable(name) {
 }
 
 /**
- * Get the score of the piece for the current turn, position and strategy.
+ * Get the score of the piece for the current turn, index and strategy.
  * @param piece The chess piece
- * @param turn The turn (Black or Chite)
- * @param position The position index
+ * @param index The position index
  * @param strategy The strategy name
  * @returns {number} The score
  */
-function getPositionScore(piece, turn, position, strategy) {
+function getPositionScore(piece, index, strategy) {
     var score = 0;
     var strategyTables = getStrategyPositionTable(strategy);
-    if('B' === turn) {
-        //The table are defined for White player, so Black scores can be found by negating the position
-        var index = 63 - position;
-        score = strategyTables[piece.type][index];
+    if('B' === piece.side) {
+        //The table are defined for White player, so Black scores can be found by negating the index
+        var blackIndex = 63 - index;
+        score = strategyTables[piece.type][blackIndex];
     } else {
-        score = strategyTables[piece.type][position];
+        score = strategyTables[piece.type][index];
     }
     //console.log('getScore(piece:' + piece.type
-    //    + ',turn:' + turn
-    //    + ',position:' + position
+    //    + ',turn:' + piece.side
+    //    + ',index:' + index
     //    + ') = ' + score
     //);
     return score;
@@ -68,7 +67,7 @@ function getPositionScore(piece, turn, position, strategy) {
 function getPieceScore(piece, strategy) {
     var piecesWeigh = getStrategyPiecesTable(strategy);
     var score = piecesWeigh[piece.type];
-    //console.log('getPieceWeigh(piece:' + piece.type + ') = ' + score);
+    //console.log('getPieceScore(piece:' + piece.type + ') = ' + score);
     return score;
 }
 

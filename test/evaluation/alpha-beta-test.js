@@ -73,7 +73,6 @@ describe('alpha-beta piece moves', function () {
 
         console.log(chessRules.positionToString(position, true));
 
-        alphaBeta.setStrategy('basic');
         var movetext = alphaBeta.getNextMove(position);
         var move = chessRules.pgnToMove(position, movetext);
 
