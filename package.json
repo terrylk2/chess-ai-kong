@@ -1,8 +1,8 @@
 {
   "name": "chess-ai-kong",
   "version": "0.2.0",
-  "description": "Really dumb but valid Chess AI.",
-  "homepage": "https://github.com/chesscorp/chess-rules",
+  "description": "Chess AI based on Alpha-Beta pruning algorithm.",
+  "homepage": "https://github.com/chesscorp/chess-ai-kong",
   "author": {
     "name": "Yannick Kirschhoffer",
     "email": "alcibiade@alcibiade.org",

@@ -9,8 +9,6 @@ describe('alpha-beta search', function () {
 
         var position = chessRules.getInitialPosition();
 
-        console.log(chessRules.positionToString(position, true));
-
         var movetext = alphaBeta.getNextMove(position);
         var move = chessRules.pgnToMove(position, movetext);
 
@@ -28,6 +26,7 @@ describe('alpha-beta search', function () {
 
      it('must provide a valid move in reply to first white move', function () {
 
+         this.timeout(5000);
          var position = chessRules.getInitialPosition();
          var moves = ['e4'];
 
@@ -71,8 +70,6 @@ describe('alpha-beta piece moves', function () {
             null, null, null, null, null, null, null, null
         ];
 
-        console.log(chessRules.positionToString(position, true));
-
         var movetext = alphaBeta.getNextMove(position);
         var move = chessRules.pgnToMove(position, movetext);
 
@@ -86,8 +83,5 @@ describe('alpha-beta piece moves', function () {
         });
 
         assert(moveIsValid, 'Move is valid');
-
-        position = chessRules.applyMove(position, move);
-        console.log(chessRules.positionToString(position, true));
     });
 });

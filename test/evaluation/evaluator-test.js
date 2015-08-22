@@ -30,12 +30,10 @@ describe('evaluator', function () {
         var position = chessRules.getInitialPosition();
         var move = chessRules.pgnToMove(position, 'e4');
 
-        console.log(chessRules.positionToString(position, true));
         var initialScore = evaluator.evaluatePosition(position, 'basic');
 
         position = chessRules.applyMove(position, move);
 
-        console.log(chessRules.positionToString(position, true));
         var blackScore = evaluator.evaluatePosition(position, 'basic');
         position.turn = 'W';
         var whiteScore = evaluator.evaluatePosition(position, 'basic');
