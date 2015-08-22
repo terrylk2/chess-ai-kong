@@ -6,41 +6,10 @@ var evalDepth = 2;
 
 var currentStrategy = 'basic';
 
-/**
- * Get the AI next move for the position passed in.
- * @param position The position and AI turn
- * @returns {*} The move
- */
-function getNextMove(position) {
-
-    //console.log('getNextMove ['+ position.turn + ']');
-    var bestMove = null;
-    var alpha = -32767;
-    var beta = 32767;
-
-    var availableMoves = chessRules.getAvailableMoves(position);
-    availableMoves.some(function (move) {
-        var tmpPosition = chessRules.applyMove(position, move);
-        var score = alphaBetaMin(tmpPosition, alpha, beta, evalDepth - 1);
-        //console.log('[alpha=' + alpha + ', beta=' + beta + ']');
-        //console.log('[rootMove:' + chessRules.moveToPgn(position, move) + ', score=' + score + ']');
-
-        //Use of alpha-beta max for the first step
-        if(score >= beta) {
-            //Cut-off
-            return true;
-        }
-
-        if(score > alpha) {
-            //we have found a better best move
-            alpha = score;
-            bestMove = move;
-        }
-        return false;
-    });
-
-    return chessRules.moveToPgn(position, bestMove);
-}
+//monitoring variables
+var alphaCutoffs = [];
+var betaCutoffs = [];
+var consoleTree = [];
 
 /**
  * Set the strategy to use in the evaluation.
@@ -51,7 +20,99 @@ function setStrategy(strategyName) {
 }
 
 /**
- * Evaluate the current position.
+ * Get the AI next move for the position passed in, this method follow the alpha beta max algorithm.
+ * @param position The position and AI turn
+ * @returns {*} The move
+ */
+function getNextMove(position) {
+
+    //monitoring initialization
+    alphaCutoffs.splice(0, alphaCutoffs.length);
+    betaCutoffs.splice(0, alphaCutoffs.length);
+    consoleTree.splice(0, alphaCutoffs.length);
+
+    //console.log('getNextMove ['+ position.turn + ']');
+    var alpha = -32767;
+    var beta = 32767;
+    var bestMove = null;
+
+    var availableMoves = chessRules.getAvailableMoves(position);
+    availableMoves.some(function (move) {
+        var tmpPosition = chessRules.applyMove(position, move);
+        //console.log('-ROOT MOVE: ' + chessRules.moveToPgn(position, move));
+        var score = alphaBetaMin(tmpPosition, alpha, beta, evalDepth - 1, chessRules.moveToPgn(position, move));
+        //consoleTree.push({
+        //        path: chessRules.moveToPgn(position, move),
+        //        type: 'max',
+        //        alpha: alpha,
+        //        beta: beta,
+        //        depth: evalDepth-1,
+        //        score: score}
+        //);
+
+        //Use of alpha-beta max for the first step
+        if(score >= beta) {
+            //Cut-off
+            //betaCutoffs.push({depth:0, move: chessRules.moveToPgn(position, move)});
+            //console.log('Big cutoff!!!!!!!!');
+            return true;
+        }
+
+        if(score > alpha) {
+            //we have found a better best move (a new max)
+            alpha = score;
+            bestMove = move;
+            //console.log('New root best move: ' + chessRules.moveToPgn(position, bestMove));
+        }
+        return false;
+    });
+
+    //dumpLogs();
+    return chessRules.moveToPgn(position, bestMove);
+}
+
+function dumpLogs() {
+    var strings = ['--ALPHA CUTOFFS--'];
+    alphaCutoffs.forEach(function (cutoff) {
+        strings.push('\n');
+        strings.push('{'
+            + 'path: ' + cutoff.path
+            + ',alpha: ' + cutoff.alpha
+            + ',beta: ' + cutoff.beta
+            + ',score: ' + cutoff.score
+            + '}');
+    });
+    console.log(strings.join(''));
+
+    strings = ['--BEAT CUTOFFS--'];
+    betaCutoffs.forEach(function (cutoff) {
+        strings.push('\n');
+        strings.push('{'
+            + 'path: ' + cutoff.path
+            + ',alpha: ' + cutoff.alpha
+            + ',beta: ' + cutoff.beta
+            + ',score: ' + cutoff.score
+            + '}');
+    });
+    console.log(strings.join(''));
+
+    strings = ['--TREE--'];
+    consoleTree.forEach(function (node) {
+        strings.push('\n');
+        strings.push('{'
+            + 'path: ' + node.path
+            + ',type: ' + node.type
+            + ',alpha: ' + node.alpha
+            + ',beta: ' + node.beta
+            + ',depth: ' + node.depth
+            + ',score: ' + node.score
+            + '}');
+    });
+    console.log(strings.join(''));
+}
+
+/**
+ * Evaluate the current position for the current player (turn).
  * @param position The current position and turn
  * @returns {number} The score (regarding the strategy currently set)
  */
@@ -108,48 +169,48 @@ function evaluatePosition(position) {
     return score;
 }
 
-function alphaBeta( position, alpha, beta, depth) {
-
-    //console.log('alphaBeta [move:' + move + ', alpha:' + alpha + ', beta:' + beta + ', depth:' + depth + '}');
-    //console.log(chessRules.positionToString(position));
-    if(depth == 0) {
-        /**
-         * TODO: Enhance with Quiescence algorithm.
-         */
-        return evaluatePosition(position);
-    }
-
-    var availableMoves = chessRules.getAvailableMoves(position);
-
-    /**
-     * TODO: Sort/Order moves (best first) to enhance the algorithm.
-     */
-
-    availableMoves.forEach(function (m) {
-
-        /**
-         * TODO: Apply move here. (might be better than cloning)
-         */
-        var tmpPosition = chessRules.applyMove(position, m);
-        var score = -alphaBeta( tmpPosition, -beta, -alpha, depth - 1 );
-
-        /**
-         * TODO: Revert move here. (might be better than cloning)
-         */
-
-        //Cut off
-        if (score >= beta) {
-            return beta;
-        }
-
-        //we have found a better best move
-        if(score > alpha) {
-            alpha = score;
-        }
-    });
-
-    return alpha;
-}
+///**
+// * Single alpha-beta algorithm.
+// *
+// * @param position
+// * @param alpha
+// * @param beta
+// * @param depth
+// * @returns {*}
+// */
+//function alphaBeta( position, alpha, beta, depth) {
+//
+//    if(depth == 0) {
+//        /**
+//         * TODO: Enhance with Quiescence algorithm.
+//         */
+//        return evaluatePosition(position);
+//    }
+//
+//    var availableMoves = chessRules.getAvailableMoves(position);
+//
+//    /**
+//     * TODO: Sort/Order moves (best first) to enhance the algorithm.
+//     */
+//
+//    availableMoves.forEach(function (m) {
+//
+//        var tmpPosition = chessRules.applyMove(position, m);
+//        var score = -alphaBeta( tmpPosition, -beta, -alpha, depth - 1 );
+//
+//        //Cut off
+//        if (score >= beta) {
+//            return beta;
+//        }
+//
+//        //we have found a better best move
+//        if(score > alpha) {
+//            alpha = score;
+//        }
+//    });
+//
+//    return alpha;
+//}
 
 /**
  * Alpha-Beta maximizing algorithm. Search for the AI best move.
@@ -159,38 +220,51 @@ function alphaBeta( position, alpha, beta, depth) {
  * @param depth The depth
  * @returns {number} The score evaluated
  */
-function alphaBetaMax(position, alpha, beta, depth) {
-    //console.log('alphaBetaMax(turn' + position.turn
-    //    + ', move:'+ chessRules.moveToPgn(position, move)
-    //    + ', alpha' + alpha
-    //    + ', beta' + beta
-    //    + ', depth' + depth
-    //);
-    var value = 0;
+function alphaBetaMax(position, alpha, beta, depth, path) {
 
     if(depth == 0) {
-        return evaluatePosition(position);
+        /**
+         * TODO: Enhance with Quiescence algorithm.
+         */
+        var value = evaluatePosition(position);
+        return value;
     }
 
     var availableMoves = chessRules.getAvailableMoves(position);
 
-    availableMoves.some(function (move) {
+    /**
+     * TODO: Sort/Order moves (best first) to enhance the algorithm.
+     */
+    availableMoves.forEach(function (move) {
         var tmpPosition = chessRules.applyMove(position, move);
-        var score = alphaBetaMin( tmpPosition, alpha, beta, depth - 1 );
+        var newPath = path + '-' + chessRules.moveToPgn(position, move);
+        var score = alphaBetaMin( tmpPosition, alpha, beta, depth - 1, newPath);
+        //consoleTree.push({
+        //        path: newPath,
+        //        type: 'min',
+        //        alpha: alpha,
+        //        beta: beta,
+        //        depth: depth-1,
+        //        score: score}
+        //);
         //Cut off
         if (score >= beta) {
-            value = beta;
-            return true;
+            //betaCutoffs.push({
+            //    path: newPath,
+            //    score: score,
+            //    alpha: alpha,
+            //    beta: beta,
+            //    move: chessRules.moveToPgn(tmpPosition, move)
+            //});
+            return beta;
         }
 
         //we have found a better best move
         if(score > alpha) {
             alpha = score;
-            value = alpha;
         }
-        return false;
     });
-    return value;
+    return alpha;
 }
 
 /**
@@ -201,40 +275,53 @@ function alphaBetaMax(position, alpha, beta, depth) {
  * @param depth The depth
  * @returns {number} The score evaluated
  */
-function alphaBetaMin(position, alpha, beta, depth) {
-    //console.log('alphaBetaMin(turn' + position.turn
-    //    + ', move:'+ chessRules.moveToPgn(position, move)
-    //    + ', alpha' + alpha
-    //    + ', beta' + beta
-    //    + ', depth' + depth
-    //);
-    var value = 0;
+function alphaBetaMin(position, alpha, beta, depth, path) {
 
     if(depth == 0) {
-        return -evaluatePosition(position);
+        /**
+         * TODO: Enhance with Quiescence algorithm.
+         */
+        var value = -evaluatePosition(position);
+        return value;
     }
 
     var availableMoves = chessRules.getAvailableMoves(position);
 
-    availableMoves.some(function (move) {
+    /**
+     * TODO: Sort/Order moves (best first) to enhance the algorithm.
+     */
+
+    availableMoves.forEach(function (move) {
         var tmpPosition = chessRules.applyMove(position, move);
-        var score = alphaBetaMax( tmpPosition ,alpha, beta, depth - 1 );
+        var newPath = path + '-' + chessRules.moveToPgn(position, move);
+        var score = alphaBetaMax( tmpPosition, alpha, beta, depth - 1, newPath);
+        //consoleTree.push({
+        //    path: newPath,
+        //    type: 'max',
+        //    alpha: alpha,
+        //    beta: beta,
+        //    depth: depth-1,
+        //    score: score}
+        //);
         //cut off
         if (score <= alpha) {
-            value = alpha;
-            return true;
+            //alphaCutoffs.push({
+            //    path: newPath,
+            //    score: score,
+            //    alpha: alpha,
+            //    beta: beta,
+            //    move: chessRules.moveToPgn(tmpPosition, move)}
+            //);
+            return alpha;
         }
 
         //opponent has found a better worse move
         if(score < beta) {
             beta = score;
-            value = beta;
         }
-        return false;
     });
-    return value;
+    return beta;
 }
-
 
 module.exports.setStrategy = setStrategy;
 module.exports.getNextMove = getNextMove;

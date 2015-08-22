@@ -1,17 +1,17 @@
 'use strict';
 var assert = require('assert');
-var alphaBetaSearch = require('../../src/evaluation/alpha-beta');
+var alphaBeta = require('../../src/evaluation/alpha-beta');
 var chessRules = require('chess-rules');
 var _ = require('underscore');
 
-describe('Alpha Beta search', function () {
+describe('alpha-beta search', function () {
     it('must provide a valid initial move as white', function () {
 
         var position = chessRules.getInitialPosition();
 
         console.log(chessRules.positionToString(position, true));
 
-        var movetext = alphaBetaSearch.getNextMove(position);
+        var movetext = alphaBeta.getNextMove(position);
         var move = chessRules.pgnToMove(position, movetext);
 
         var availableMoves = chessRules.getAvailableMoves(position);
@@ -36,7 +36,7 @@ describe('Alpha Beta search', function () {
             position = chessRules.applyMove(position, m);
          });
 
-         var movetext = alphaBetaSearch.getNextMove(position);
+         var movetext = alphaBeta.getNextMove(position);
          var move = chessRules.pgnToMove(position, movetext);
          var availableMoves = chessRules.getAvailableMoves(position);
 
@@ -49,4 +49,46 @@ describe('Alpha Beta search', function () {
 
          assert(moveIsValid, 'Move is valid');
      });
+
+});
+
+
+describe('alpha-beta piece moves', function () {
+    it('must provide the best move for a Pawn', function () {
+
+        var pwnW = {type: 'P', side: 'W'};
+        var pwnB = {type: 'P', side: 'B'};
+        var position = chessRules.getInitialPosition();
+        position.turn = 'W';
+        position.board = [
+            null, null, null, null, null, null, null, null,
+            null, null, null, pwnW, null, null, null, null,
+            null, null, null, null, null, null, null, null,
+            null, null, null, null, null, null, null, null,
+            null, null, null, null, null, null, null, null,
+            null, null, null, null, null, null, null, null,
+            null, null, null, pwnB, null, null, null, null,
+            null, null, null, null, null, null, null, null
+        ];
+
+        console.log(chessRules.positionToString(position, true));
+
+        alphaBeta.setStrategy('basic');
+        var movetext = alphaBeta.getNextMove(position);
+        var move = chessRules.pgnToMove(position, movetext);
+
+        var availableMoves = chessRules.getAvailableMoves(position);
+
+        var moveIsValid = false;
+        availableMoves.forEach(function (v) {
+            if (_.isMatch(v, move)) {
+                moveIsValid = true;
+            }
+        });
+
+        assert(moveIsValid, 'Move is valid');
+
+        position = chessRules.applyMove(position, move);
+        console.log(chessRules.positionToString(position, true));
+    });
 });
