@@ -39,11 +39,12 @@ function getNextMove(position) {
     var availableMoves = chessRules.getAvailableMoves(position);
     availableMoves.some(function (move) {
         var tmpPosition = chessRules.applyMove(position, move);
+        //var pgnMove = chessRules.moveToPgn(position, move);
         //console.log('-ROOT MOVE: ' + chessRules.moveToPgn(position, move));
         var score = alphaBetaMin(tmpPosition, alpha, beta, evalDepth - 1, chessRules.moveToPgn(position, move));
         //consoleTree.push({
-        //        path: chessRules.moveToPgn(position, move),
-        //        type: 'max',
+        //        path: pgnMove,
+        //        type: 'min',
         //        alpha: alpha,
         //        beta: beta,
         //        depth: evalDepth-1,
@@ -53,7 +54,13 @@ function getNextMove(position) {
         //Use of alpha-beta max for the first step
         if(score >= beta) {
             //Cut-off
-            //betaCutoffs.push({depth:0, move: chessRules.moveToPgn(position, move)});
+            //betaCutoffs.push({
+            //    path: pgnMove,
+            //    score: score,
+            //    alpha: alpha,
+            //    beta: beta,
+            //    move: pgnMove
+            //});
             //console.log('Big cutoff!!!!!!!!');
             return true;
         }
@@ -84,7 +91,7 @@ function dumpLogs() {
     });
     console.log(strings.join(''));
 
-    strings = ['--BEAT CUTOFFS--'];
+    strings = ['--BETA CUTOFFS--'];
     betaCutoffs.forEach(function (cutoff) {
         strings.push('\n');
         strings.push('{'
@@ -177,12 +184,12 @@ function alphaBetaMax(position, alpha, beta, depth, path) {
     /**
      * TODO: Sort/Order moves (best first) to enhance the algorithm.
      */
-    availableMoves.forEach(function (move) {
+    availableMoves.some(function (move) {
         var tmpPosition = chessRules.applyMove(position, move);
-        var newPath = path + '-' + chessRules.moveToPgn(position, move);
+        var pgnMove = chessRules.moveToPgn(position, move);
         var score = alphaBetaMin( tmpPosition, alpha, beta, depth - 1, newPath);
         //consoleTree.push({
-        //        path: newPath,
+        //        path: path + '-' + pgnMove,
         //        type: 'min',
         //        alpha: alpha,
         //        beta: beta,
@@ -192,19 +199,21 @@ function alphaBetaMax(position, alpha, beta, depth, path) {
         //Cut off
         if (score >= beta) {
             //betaCutoffs.push({
-            //    path: newPath,
+            //    path: path + '-' + pgnMove,
             //    score: score,
             //    alpha: alpha,
             //    beta: beta,
-            //    move: chessRules.moveToPgn(tmpPosition, move)
+            //    move: pgnMove
             //});
-            return beta;
+            alpha = beta;
+            return true;
         }
 
         //we have found a better best move
         if(score > alpha) {
             alpha = score;
         }
+        return false;
     });
     return alpha;
 }
@@ -233,12 +242,12 @@ function alphaBetaMin(position, alpha, beta, depth, path) {
      * TODO: Sort/Order moves (best first) to enhance the algorithm.
      */
 
-    availableMoves.forEach(function (move) {
+    availableMoves.some(function (move) {
         var tmpPosition = chessRules.applyMove(position, move);
-        var newPath = path + '-' + chessRules.moveToPgn(position, move);
-        var score = alphaBetaMax( tmpPosition, alpha, beta, depth - 1, newPath);
+        var pgnMove = chessRules.moveToPgn(position, move);
+        var score = alphaBetaMax( tmpPosition, alpha, beta, depth - 1, path + '-' + pgnMove);
         //consoleTree.push({
-        //    path: newPath,
+        //    path: path + '-' + pgnMove,
         //    type: 'max',
         //    alpha: alpha,
         //    beta: beta,
@@ -248,19 +257,21 @@ function alphaBetaMin(position, alpha, beta, depth, path) {
         //cut off
         if (score <= alpha) {
             //alphaCutoffs.push({
-            //    path: newPath,
+            //    path: path + '-' + pgnMove,
             //    score: score,
             //    alpha: alpha,
             //    beta: beta,
-            //    move: chessRules.moveToPgn(tmpPosition, move)}
+            //    move: pgnMove}
             //);
-            return alpha;
+            beta = alpha;
+            return true;
         }
 
         //opponent has found a better worse move
         if(score < beta) {
             beta = score;
         }
+        return false;
     });
     return beta;
 }

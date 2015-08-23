@@ -26,7 +26,6 @@ describe('alpha-beta search', function () {
 
      it('must provide a valid move in reply to first white move', function () {
 
-         this.timeout(5000);
          var position = chessRules.getInitialPosition();
          var moves = ['e4'];
 
