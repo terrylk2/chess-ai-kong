@@ -1,6 +1,6 @@
 'use strict';
 
-var evaluator = require('./evaluation/alpha-beta');
+var aiSearch = require('./evaluation/alpha-beta');
 
 /**
  * Get the next move from the current status of the game.
@@ -10,9 +10,11 @@ var evaluator = require('./evaluation/alpha-beta');
  */
 function play(position) {
 
-    evaluator.setStrategy('basic');
+    //AI Search configuration
+    aiSearch.setStrategy('basic');
+    aiSearch.setDepth(2);
 
-    var aiMove = evaluator.getNextMove(position);
+    var aiMove = aiSearch.getNextMove(position);
 
     console.log('Replied move: ' + aiMove);
 

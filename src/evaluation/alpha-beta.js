@@ -2,8 +2,8 @@
 
 var chessRules = require('chess-rules');
 var evaluator = require('./evaluator');
-var evalDepth = 2;
 
+var searchDepth = 2;
 var currentStrategy = 'basic';
 
 //monitoring variables
@@ -13,10 +13,18 @@ var consoleTree = [];
 
 /**
  * Set the strategy to use in the evaluation.
- * @param strategyName The strategy name ('basic', 'random')
+ * @param strategyName The strategy name ('basic' by default, 'random')
  */
 function setStrategy(strategyName) {
     currentStrategy = strategyName;
+}
+
+/**
+ * Set the depth of the alpha-beta algorithm.
+ * @param depth The depth (2 by default)
+ */
+function setDepth(depth) {
+    searchDepth = depth;
 }
 
 /**
@@ -39,15 +47,15 @@ function getNextMove(position) {
     var availableMoves = chessRules.getAvailableMoves(position);
     availableMoves.some(function (move) {
         var tmpPosition = chessRules.applyMove(position, move);
-        //var pgnMove = chessRules.moveToPgn(position, move);
+        var pgnMove = chessRules.moveToPgn(position, move);
         //console.log('-ROOT MOVE: ' + chessRules.moveToPgn(position, move));
-        var score = alphaBetaMin(tmpPosition, alpha, beta, evalDepth - 1, chessRules.moveToPgn(position, move));
+        var score = alphaBetaMin(tmpPosition, alpha, beta, searchDepth - 1, pgnMove);
         //consoleTree.push({
         //        path: pgnMove,
         //        type: 'min',
         //        alpha: alpha,
         //        beta: beta,
-        //        depth: evalDepth-1,
+        //        depth: searchDepth-1,
         //        score: score}
         //);
 
@@ -167,6 +175,7 @@ function dumpLogs() {
  * @param alpha The current best score
  * @param beta The current worst score
  * @param depth The depth
+ * @param path The path (succession of moves) of the recursive algorithm
  * @returns {number} The score evaluated
  */
 function alphaBetaMax(position, alpha, beta, depth, path) {
@@ -175,8 +184,7 @@ function alphaBetaMax(position, alpha, beta, depth, path) {
         /**
          * TODO: Enhance with Quiescence algorithm.
          */
-        var value = evaluator.evaluatePosition(position, currentStrategy);
-        return value;
+        return evaluator.evaluatePosition(position, currentStrategy);
     }
 
     var availableMoves = chessRules.getAvailableMoves(position);
@@ -187,7 +195,7 @@ function alphaBetaMax(position, alpha, beta, depth, path) {
     availableMoves.some(function (move) {
         var tmpPosition = chessRules.applyMove(position, move);
         var pgnMove = chessRules.moveToPgn(position, move);
-        var score = alphaBetaMin( tmpPosition, alpha, beta, depth - 1, newPath);
+        var score = alphaBetaMin( tmpPosition, alpha, beta, depth - 1, path + '-' + pgnMove);
         //consoleTree.push({
         //        path: path + '-' + pgnMove,
         //        type: 'min',
@@ -224,6 +232,7 @@ function alphaBetaMax(position, alpha, beta, depth, path) {
  * @param alpha The current worst score
  * @param beta The current best score
  * @param depth The depth
+ * @param path The path (succession of moves) of the recursive algorithm
  * @returns {number} The score evaluated
  */
 function alphaBetaMin(position, alpha, beta, depth, path) {
@@ -232,8 +241,7 @@ function alphaBetaMin(position, alpha, beta, depth, path) {
         /**
          * TODO: Enhance with Quiescence algorithm.
          */
-        var value = -evaluator.evaluatePosition(position, currentStrategy);
-        return value;
+        return -evaluator.evaluatePosition(position, currentStrategy);
     }
 
     var availableMoves = chessRules.getAvailableMoves(position);
@@ -276,5 +284,6 @@ function alphaBetaMin(position, alpha, beta, depth, path) {
     return beta;
 }
 
+module.exports.setDepth = setDepth;
 module.exports.setStrategy = setStrategy;
 module.exports.getNextMove = getNextMove;
