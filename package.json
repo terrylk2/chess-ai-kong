@@ -21,7 +21,7 @@
   ],
   "main": "./src",
   "dependencies": {
-    "chess-rules": "^0.8.0"
+    "chess-rules": "^0.10.2"
   },
   "devDependencies": {
     "grunt": "^0.4.0",
