@@ -32,7 +32,7 @@ describe('strategy-basic', function () {
         assert(whiteValue === blackValue, 'Not symmetric');
     });
 
-    it('must provide a score for each queen', function () {
+    it('must provide a score for a queen', function () {
         var whiteValue = strategy.getPieceScore({type: 'Q', side:'W'}, 'basic');
         var blackValue = strategy.getPieceScore({type: 'Q', side:'B'}, 'basic');
         assert(whiteValue === 900, 'Wrong value');
