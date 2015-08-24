@@ -4,54 +4,8 @@ var alphaBeta = require('../../src/evaluation/alpha-beta');
 var evaluator = require('../../src/evaluation/evaluator');
 var chessRules = require('chess-rules');
 
-//describe('alpha-beta search', function () {
-//    it('must provide a valid initial move as white', function () {
-//
-//        var position = chessRules.getInitialPosition();
-//
-//        var moveText = alphaBeta.getNextMove(position);
-//        var move = chessRules.pgnToMove(position, moveText);
-//
-//        var availableMoves = chessRules.getAvailableMoves(position);
-//
-//        var moveIsValid = false;
-//        availableMoves.forEach(function (v) {
-//            if (_.isMatch(v, move)) {
-//                moveIsValid = true;
-//            }
-//        });
-//
-//        assert(moveIsValid, 'Move is valid');
-//    });
-//
-//     it('must provide a valid move in reply to first white move', function () {
-//
-//         var position = chessRules.getInitialPosition();
-//         var moves = ['e4'];
-//
-//         moves.forEach(function (move) {
-//            var m = chessRules.pgnToMove(position, move);
-//            position = chessRules.applyMove(position, m);
-//         });
-//
-//         var moveText = alphaBeta.getNextMove(position);
-//         var move = chessRules.pgnToMove(position, moveText);
-//         var availableMoves = chessRules.getAvailableMoves(position);
-//
-//         var moveIsValid = false;
-//         availableMoves.forEach(function (v) {
-//            if (_.isMatch(v, move)) {
-//                moveIsValid = true;
-//            }
-//         });
-//
-//         assert(moveIsValid, 'Move is valid');
-//     });
-//
-//});
 
-
-describe('alpha-beta drive position', function () {
+describe('alpha-beta-basic drive position', function () {
 
     /**
      * Position the piece in a bad position and assert that the algorithm make them reach a better position.

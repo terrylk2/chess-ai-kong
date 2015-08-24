@@ -1,6 +1,10 @@
 'use strict';
 
 var aiSearch = require('./evaluation/alpha-beta');
+var chessRules = require('chess-rules');
+
+aiSearch.setStrategy('basic');
+aiSearch.setDepth(2);
 
 /**
  * Get the next move from the current status of the game.
@@ -8,38 +12,27 @@ var aiSearch = require('./evaluation/alpha-beta');
  * @param position The actual positions
  * @returns {*} the pgn move chosen by the AI
  */
-function play(position) {
+function playPosition(position) {
 
-    //AI Search configuration
-    aiSearch.setStrategy('basic');
-    aiSearch.setDepth(2);
-
-    var aiMove = aiSearch.getNextMove(position);
-
-    console.log('Replied move: ' + aiMove);
-
-    return aiMove;
+    return aiSearch.getNextMove(position);
 }
 
 /**
+ * Get the next move from the complete sequence of moves of the game.
  *
- * @param pgnMoves
+ * @param pgnMoves the complete sequence of moves since the beginning of the game
  */
-/*
-function play(pgnMoves) {
+function playMoves(pgnMoves) {
+
     var position = chessRules.getInitialPosition();
 
-    pgnMoves.forEach(function (movetext) {
-        var moveCoords = chessRules.pgnToMove(position, movetext);
+    pgnMoves.forEach(function (moveText) {
+        var moveCoords = chessRules.pgnToMove(position, moveText);
         position = chessRules.applyMove(position, moveCoords);
     });
 
-    var availableMoves = chessRules.getAvailableMoves(position);
-    var selectedMove = availableMoves[Math.floor(Math.random() * availableMoves.length)];
-    var movetext = chessRules.moveToPgn(position, selectedMove);
-
-    return movetext;
+    return playPosition(position);
 }
-*/
 
-module.exports.play = play;
+module.exports.play = playMoves;
+module.exports.playPosition = playPosition;
