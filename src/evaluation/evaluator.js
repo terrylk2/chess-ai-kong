@@ -6,17 +6,14 @@ var strategy = require('./strategy');
 /**
  * Evaluate the current position for the current player (turn).
  * @param position The current position and turn
+ * @param strategyName The name of the strategy to use
  * @returns {number} The score (regarding the strategy currently set)
  */
 function evaluatePosition(position, strategyName) {
 
-    /**
-     * TODO: optimization.
-     * @type {number}
-     */
-
     var score = 0;
-    var currentTurn = position.turn;
+    var player = position.turn;
+    var opponent = position.turn === 'W' ? 'B' : 'W';
 
     var row;
     var col;
@@ -26,7 +23,7 @@ function evaluatePosition(position, strategyName) {
             if (currentPiece == null) {
                 continue;
             } else {
-                if(currentPiece.side == currentTurn) {
+                if(currentPiece.side == player) {
                     score += strategy.getPieceScore(currentPiece, strategyName);
                     score += strategy.getPositionScore(
                         currentPiece,
@@ -45,27 +42,18 @@ function evaluatePosition(position, strategyName) {
         }
     }
 
-    /**
-     * TODO Evaluate mobility (number of moves).
-     */
-
-    /**
-     * TODO Evaluate captures.
-     */
-
-    /**
-     * TODO: Evaluate checks.
-     */
+    //Checks
     if(position.check) {
         score -= 500;
     }
 
-    /**
-     * TODO Evaluate castlings.
-     */
-    //if(position.castlingFlags[position.turn].K || position.castlingFlags[position.turn].Q) {
-    //    score += 500;
-    //}
+    //Castlings
+    if(!position.castlingFlags[player].K || !position.castlingFlags[player].Q) {
+        score += 100;
+    }
+    if(!position.castlingFlags[opponent].K || !position.castlingFlags[opponent].Q) {
+        score -= 100;
+    }
 
     return score;
 }
