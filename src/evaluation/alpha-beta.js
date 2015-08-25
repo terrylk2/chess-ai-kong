@@ -33,13 +33,13 @@ function setDepth(depth) {
  * @returns {*} The move
  */
 function getNextMove(position) {
+    //console.log('getNextMove ['+ position.turn + ']');
 
     //monitoring initialization
     alphaCutoffs.splice(0, alphaCutoffs.length);
     betaCutoffs.splice(0, alphaCutoffs.length);
     consoleTree.splice(0, alphaCutoffs.length);
 
-    //console.log('getNextMove ['+ position.turn + ']');
     var alpha = -32767;
     var beta = 32767;
     var bestMove = null;
@@ -83,7 +83,7 @@ function getNextMove(position) {
     });
 
     //dumpLogs();
-    return chessRules.moveToPgn(position, bestMove);
+    return bestMove == null ? null : chessRules.moveToPgn(position, bestMove);
 }
 
 function dumpLogs() {
@@ -180,7 +180,7 @@ function dumpLogs() {
  */
 function alphaBetaMax(position, alpha, beta, depth, path) {
 
-    if(depth == 0) {
+    if(depth == 0 || chessRules.getGameStatus(position) !== 'OPEN') {
         /**
          * TODO: Enhance with Quiescence algorithm.
          */
@@ -237,7 +237,7 @@ function alphaBetaMax(position, alpha, beta, depth, path) {
  */
 function alphaBetaMin(position, alpha, beta, depth, path) {
 
-    if(depth == 0) {
+    if(depth == 0 || chessRules.getGameStatus(position) !== 'OPEN') {
         /**
          * TODO: Enhance with Quiescence algorithm.
          */

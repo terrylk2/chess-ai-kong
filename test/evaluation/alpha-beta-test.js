@@ -4,7 +4,6 @@ var alphaBeta = require('../../src/evaluation/alpha-beta');
 var evaluator = require('../../src/evaluation/evaluator');
 var chessRules = require('chess-rules');
 
-
 describe('alpha-beta-basic drive position', function () {
 
     /**
@@ -143,5 +142,70 @@ describe('alpha-beta-basic drive position', function () {
         ];
 
         testPieceBetterPosition(position, 'King');
+    });
+});
+
+describe('alpha-beta-basic end', function () {
+
+    it('must provide a finishing black move', function () {
+
+        var kinW = {type: 'K', side: 'W'};
+        var kinB = {type: 'K', side: 'B'};
+        var queB = {type: 'Q', side: 'B'};
+        var rooB = {type: 'R', side: 'B'};
+        var position = chessRules.getInitialPosition();
+        position.turn = 'B';
+        position.board = [
+            kinW, null, null, null, null, null, null, null,
+            null, null, null, null, null, null, null, null,
+            null, null, null, null, null, null, null, null,
+            null, null, null, null, null, null, null, null,
+            null, null, null, null, null, null, null, null,
+            null, null, null, null, null, null, null, null,
+            null, null, null, null, null, null, null, null,
+            null, rooB, null, kinB, queB, null, null, null
+        ];
+        //Qa4 is the move that will make the white player check mate
+
+        var initialScore = evaluator.evaluatePosition(position, 'basic');
+        var moveText = alphaBeta.getNextMove(position);
+        var move = chessRules.pgnToMove(position, moveText);
+        position = chessRules.applyMove(position,  move);
+        var moveScore = evaluator.evaluatePosition(position, 'basic');
+        assert(initialScore >= moveScore, 'Not a good move move!');
+        assert(moveText === "Qa4+", 'Not the best move!');
+        assert(chessRules.getGameStatus(position) === 'BLACKWON', 'Not the best move!');
+    });
+
+    it('must provide a finishing white move', function () {
+
+        var kinB = {type: 'K', side: 'B'};
+        var kinW = {type: 'K', side: 'W'};
+        var queW = {type: 'Q', side: 'W'};
+        var rooW = {type: 'R', side: 'W'};
+        var position = chessRules.getInitialPosition();
+        position.turn = 'W';
+        position.board = [
+            null, rooW, null, kinW, queW, null, null, null,
+            null, null, null, null, null, null, null, null,
+            null, null, null, null, null, null, null, null,
+            null, null, null, null, null, null, null, null,
+            null, null, null, null, null, null, null, null,
+            null, null, null, null, null, null, null, null,
+            null, null, null, null, null, null, null, null,
+            kinB, null, null, null, null, null, null, null
+        ];
+        //Qa5 is the move that will make the white player check mate
+
+        var initialScore = evaluator.evaluatePosition(position, 'basic');
+
+        position.turn = 'W';
+        var moveText = alphaBeta.getNextMove(position);
+        var move = chessRules.pgnToMove(position, moveText);
+        position = chessRules.applyMove(position,  move);
+        var moveScore = evaluator.evaluatePosition(position, 'basic');
+        assert(initialScore >= moveScore, 'Not a good move move!');
+        assert(moveText === "Qa5+", 'Not the best move!');
+        assert(chessRules.getGameStatus(position) === 'WHITEWON', 'Not the best move!');
     });
 });
