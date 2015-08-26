@@ -9,8 +9,9 @@ describe('alpha-beta-basic drive position', function () {
     /**
      * Position the piece in a bad position and assert that the algorithm make them reach a better position.
      */
-
     function testPieceBetterPosition(position, pieceName) {
+        var depth = 2;
+        alphaBeta.setDepth(depth);
         var initialScore = evaluator.evaluatePosition(position, 'basic');
 
         position.turn = 'W';
@@ -19,7 +20,7 @@ describe('alpha-beta-basic drive position', function () {
         var tmpPosition = chessRules.applyMove(position,  move);
         tmpPosition.turn = 'W';
         var moveScore = evaluator.evaluatePosition(tmpPosition, 'basic');
-        assert(initialScore <= moveScore, 'Not the best White Pawn move!');
+        assert(initialScore <= moveScore, 'Not the best White Pawn move (depth = ' + depth + ')!');
 
         position.turn = 'B';
         moveText = alphaBeta.getNextMove(position);
@@ -27,7 +28,7 @@ describe('alpha-beta-basic drive position', function () {
         tmpPosition = chessRules.applyMove(position,  move);
         tmpPosition.turn = 'B';
         moveScore = evaluator.evaluatePosition(tmpPosition, 'basic');
-        assert(initialScore <= moveScore, 'Not the best Black ' + pieceName + ' move!');
+        assert(initialScore <= moveScore, 'Not the best Black ' + pieceName + ' move (depth = ' + depth + ')!');
     }
     it('must provide the best move (position) for a Pawn', function () {
 
@@ -145,6 +146,102 @@ describe('alpha-beta-basic drive position', function () {
     });
 });
 
+describe('alpha-beta-basic depth', function () {
+
+    it('must provide a better move with depth 1', function () {
+
+        var pwnW = {type: 'P', side: 'W'};
+        var pwnB = {type: 'P', side: 'B'};
+        var position = chessRules.getInitialPosition();
+        position.turn = 'W';
+        position.board = [
+            null, null, null, null, null, null, null, null,
+            null, null, null, null, pwnW, null, null, null,
+            null, null, null, pwnB, null, pwnB, null, null,
+            null, null, pwnB, null, null, null, null, null,
+            null, null, null, null, pwnB, null, null, null,
+            null, null, null, null, null, null, null, null,
+            null, null, null, null, null, null, null, null,
+            null, null, null, null, null, null, null, null
+        ];
+
+        //With depth 1, any capture seems to be the best move
+        alphaBeta.setDepth(1);
+        var moveText = alphaBeta.getNextMove(position);
+        assert(moveText === "exd3" || moveText === "exf3");
+    });
+
+    it('must provide a better move with depth 2', function () {
+
+        var pwnW = {type: 'P', side: 'W'};
+        var pwnB = {type: 'P', side: 'B'};
+        var position = chessRules.getInitialPosition();
+        position.turn = 'W';
+        position.board = [
+            null, null, null, null, null, null, null, null,
+            null, null, null, null, pwnW, null, null, null,
+            null, null, null, pwnB, null, pwnB, null, null,
+            null, null, pwnB, null, null, null, null, null,
+            null, null, null, null, pwnB, null, null, null,
+            null, null, null, null, null, null, null, null,
+            null, null, null, null, null, null, null, null,
+            null, null, null, null, null, null, null, null
+        ];
+
+        //With depth 2, the capture of f3 seems to be safer (because black can retaliate in d3)
+        alphaBeta.setDepth(2);
+        var moveText = alphaBeta.getNextMove(position);
+        assert(moveText === "exf3");
+    });
+
+    it('must provide a better move with depth 3', function () {
+
+        var pwnW = {type: 'P', side: 'W'};
+        var pwnB = {type: 'P', side: 'B'};
+        var position = chessRules.getInitialPosition();
+        position.turn = 'W';
+        position.board = [
+            null, null, null, null, null, null, null, null,
+            null, null, null, null, pwnW, null, null, null,
+            null, null, null, pwnB, null, pwnB, null, null,
+            null, null, pwnB, null, null, null, null, null,
+            null, null, null, null, pwnB, null, null, null,
+            null, null, null, null, null, null, null, null,
+            null, null, null, null, null, null, null, null,
+            null, null, null, null, null, null, null, null
+        ];
+
+        //With depth 3, the capture of f3 still seems to be safer as white can progress with his pawn
+        alphaBeta.setDepth(3);
+        var moveText = alphaBeta.getNextMove(position);
+        assert(moveText === "exf3");
+    });
+
+    it('must provide a better move with depth 4', function () {
+
+        var pwnW = {type: 'P', side: 'W'};
+        var pwnB = {type: 'P', side: 'B'};
+        var position = chessRules.getInitialPosition();
+        position.turn = 'W';
+        position.board = [
+            null, null, null, null, null, null, null, null,
+            null, null, null, null, pwnW, null, null, null,
+            null, null, null, pwnB, null, pwnB, null, null,
+            null, null, pwnB, null, null, null, null, null,
+            null, null, null, null, pwnB, null, null, null,
+            null, null, null, null, null, null, null, null,
+            null, null, null, null, null, null, null, null,
+            null, null, null, null, null, null, null, null
+        ];
+
+        //With depth 4, white know that black will end up capturing his pawn in the f column. The best move is to
+        //not get your pawn captured in e4
+        alphaBeta.setDepth(4);
+        var moveText = alphaBeta.getNextMove(position);
+        assert(moveText === "e4");
+    });
+});
+
 describe('alpha-beta-basic end', function () {
 
     it('must provide a finishing black move', function () {
@@ -167,6 +264,7 @@ describe('alpha-beta-basic end', function () {
         ];
         //Qa4 is the move that will make the white player check mate
 
+        alphaBeta.setDepth(2);
         var initialScore = evaluator.evaluatePosition(position, 'basic');
         var moveText = alphaBeta.getNextMove(position);
         var move = chessRules.pgnToMove(position, moveText);
@@ -199,6 +297,7 @@ describe('alpha-beta-basic end', function () {
 
         var initialScore = evaluator.evaluatePosition(position, 'basic');
 
+        alphaBeta.setDepth(2);
         position.turn = 'W';
         var moveText = alphaBeta.getNextMove(position);
         var move = chessRules.pgnToMove(position, moveText);
