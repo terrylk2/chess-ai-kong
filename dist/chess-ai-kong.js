@@ -3566,6 +3566,7 @@ process.umask = function() { return 0; };
 
 var chessRules = require('chess-rules');
 var evaluator = require('./evaluator');
+var sorter = require('./moves-sort');
 
 var searchDepth = 2;
 var currentStrategy = 'basic';
@@ -3573,6 +3574,8 @@ var currentStrategy = 'basic';
 //monitoring variables
 var cutoffs = [];
 var consoleTree = [];
+var nbNodeSearched = 0;
+var nbCutoffs = 0;
 
 /**
  * Set the strategy to use in the evaluation.
@@ -3601,13 +3604,17 @@ function getNextMove(position) {
     //monitoring initialization
     cutoffs.splice(0, cutoffs.length);
     consoleTree.splice(0, consoleTree.length);
+    nbNodeSearched = 0;
+    nbCutoffs = 0;
 
-    var alpha = -32767;
-    var beta = 32767;
+    var alpha = -1000000;
+    var beta = 1000000;
     var bestMove = null;
 
     var availableMoves = chessRules.getAvailableMoves(position);
+    availableMoves = sorter.sortMoves(availableMoves, position);
     availableMoves.some(function (move) {
+        nbNodeSearched++;
         var tmpPosition = chessRules.applyMove(position, move);
         var pgnMove = chessRules.moveToPgn(position, move);
         //console.log('-ROOT MOVE: ' + chessRules.moveToPgn(position, move));
@@ -3632,6 +3639,7 @@ function getNextMove(position) {
             //    move: pgnMove
             //});
             //console.log('Big cutoff!!!!!!!!');
+            nbCutoffs++;
             return true;
         }
 
@@ -3650,31 +3658,38 @@ function getNextMove(position) {
 
 function dumpLogs() {
 
-    var strings = ['--CUTOFFS--'];
-    cutoffs.forEach(function (cutoff) {
-        strings.push('\n');
-        strings.push('{'
-            + 'path: ' + cutoff.path
-            + ',alpha: ' + cutoff.alpha
-            + ',beta: ' + cutoff.beta
-            + ',score: ' + cutoff.score
-            + '}');
-    });
-    console.log(strings.join(''));
+    console.log(nbNodeSearched + ' node searched');
+    console.log(nbCutoffs + ' cut-offs');
+    var strings;
+    if(cutoffs.length > 0) {
+        strings = ['--CUTOFFS--'];
+        cutoffs.forEach(function (cutoff) {
+            strings.push('\n');
+            strings.push('{'
+                + 'path: ' + cutoff.path
+                + ',alpha: ' + cutoff.alpha
+                + ',beta: ' + cutoff.beta
+                + ',score: ' + cutoff.score
+                + '}');
+        });
+        console.log(strings.join(''));
+    }
 
-    strings = ['--TREE--'];
-    consoleTree.forEach(function (node) {
-        strings.push('\n');
-        strings.push('{'
-            + 'path: ' + node.path
-            + ',type: ' + node.type
-            + ',alpha: ' + node.alpha
-            + ',beta: ' + node.beta
-            + ',depth: ' + node.depth
-            + ',score: ' + node.score
-            + '}');
-    });
-    console.log(strings.join(''));
+    if(consoleTree.length > 0) {
+        strings = ['--TREE--'];
+        consoleTree.forEach(function (node) {
+            strings.push('\n');
+            strings.push('{'
+                + 'path: ' + node.path
+                + ',type: ' + node.type
+                + ',alpha: ' + node.alpha
+                + ',beta: ' + node.beta
+                + ',depth: ' + node.depth
+                + ',score: ' + node.score
+                + '}');
+        });
+        console.log(strings.join(''));
+    }
 }
 
 /**
@@ -3689,6 +3704,8 @@ function dumpLogs() {
  */
 function alphaBeta( position, alpha, beta, depth, path) {
 
+    nbNodeSearched++;
+
     if(depth == 0  || chessRules.getGameStatus(position) !== 'OPEN') {
         /**
          * TODO: Enhance with Quiescence algorithm.
@@ -3697,10 +3714,7 @@ function alphaBeta( position, alpha, beta, depth, path) {
     }
 
     var availableMoves = chessRules.getAvailableMoves(position);
-
-    /**
-     * TODO: Sort/Order moves (best first) to enhance the algorithm.
-     */
+    availableMoves = sorter.sortMoves(availableMoves, position);
 
     availableMoves.some(function (move) {
 
@@ -3718,6 +3732,7 @@ function alphaBeta( position, alpha, beta, depth, path) {
             //    beta: beta,
             //    move: pgnMove
             //});
+            nbCutoffs++;
             alpha = beta;
             return true;
         }
@@ -3735,7 +3750,7 @@ function alphaBeta( position, alpha, beta, depth, path) {
 module.exports.setDepth = setDepth;
 module.exports.setStrategy = setStrategy;
 module.exports.getNextMove = getNextMove;
-},{"./evaluator":26,"chess-rules":23}],26:[function(require,module,exports){
+},{"./evaluator":26,"./moves-sort":27,"chess-rules":23}],26:[function(require,module,exports){
 'use-strict';
 
 //var chessRules = require('chess-rules');
@@ -3797,7 +3812,125 @@ function evaluatePosition(position, strategyName) {
 }
 
 module.exports.evaluatePosition = evaluatePosition;
-},{"./strategy":29}],27:[function(require,module,exports){
+},{"./strategy":30}],27:[function(require,module,exports){
+'use strict';
+
+var chessRules = require('chess-rules');
+var strategy = require('./strategy');
+var evaluator = require('./evaluator');
+
+function sortMoves(moves, position) {
+
+    var fullMoves = new Array(moves.length);
+
+    var i;
+    for(i=0; i<moves.length; i++) {
+        var move = moves[i];
+        fullMoves[i] = {
+            pgn: chessRules.moveToPgn(position, move),
+            move: move
+        };
+    }
+
+    fullMoves = quickSort(position, fullMoves, 0, fullMoves.length-1);
+
+    var sortedMoves = new Array(moves.length);
+    for(i=0; i<moves.length; i++) {
+        sortedMoves[i] = fullMoves[i].move;
+    };
+
+    return sortedMoves;
+}
+
+function quickSort(position, fullMoves, lowInd, highInd) {
+
+    var i = lowInd;
+    var j = highInd;
+    var pivot = rateMove(fullMoves[lowInd + Math.floor((highInd - lowInd) / 2)], position);
+
+    while (i <= j) {
+        while (rateMove(fullMoves[i], position) < pivot) {
+            i++;
+        }
+        while (rateMove(fullMoves[j], position) > pivot) {
+            j--;
+        }
+        if (i <= j) {
+            swapMoves(fullMoves, i, j);
+            i++;
+            j--;
+        }
+    }
+
+    if (lowInd < j) {
+        fullMoves = quickSort(position, fullMoves, lowInd, j);
+    }
+    if (i < highInd) {
+        fullMoves = quickSort(position, fullMoves, i, highInd);
+    }
+    return fullMoves;
+}
+
+function swapMoves(moves, indA, indB) {
+    var temp = moves[indA];
+    moves[indA] = moves[indB];
+    moves[indB] = temp;
+}
+
+function rateAttack(move) {
+
+    var moveRate = 0;
+    if(move.pgn.indexOf('-')) {
+        //castling
+        moveRate += 40;
+    } else {
+        if(move.pgn.indexOf('x')) {
+            //capture
+            moveRate += 100;
+        }
+
+        if(move.pgn.indexOf('=')) {
+            //promotion
+            moveRate += 200;
+        }
+    }
+
+    if(move.pgn.indexOf('+')) {
+        //check
+        moveRate += 500;
+    }
+
+    return moveRate;
+}
+
+function ratePosition(move, position) {
+    var currentPiece = position.board[move.move.src];
+    if (currentPiece == null) {
+        return 0;
+    } else {
+        return strategy.getPositionScore(
+            currentPiece,
+            move.move.dst,
+            'basic'
+        );
+    }
+}
+
+function ratePiece(move, position) {
+    var currentPiece = position.board[move.move.src];
+    return strategy.getPieceScore(
+        currentPiece,
+        'basic'
+    );
+}
+
+function rateMove(move, position) {
+    //Negate to sort from the best to the worst
+    return -(rateAttack(move) + ratePosition(move, position) + ratePiece(move, position));
+}
+
+module.exports.sortMoves = sortMoves;
+},{"./evaluator":26,"./strategy":30,"chess-rules":23}],28:[function(require,module,exports){
 'use strict';
 
 /**
@@ -3896,7 +4029,7 @@ function getStrategyPiecesTable() {
 module.exports.getStrategyPositionTable = getStrategyPositionTable;
 module.exports.getStrategyPiecesTable = getStrategyPiecesTable;
 
-},{}],28:[function(require,module,exports){
+},{}],29:[function(require,module,exports){
 'use strict';
 
 /**
@@ -3986,7 +4119,7 @@ function getStrategyPiecesTable() {
 module.exports.getStrategyPositionTable = getStrategyPositionTable;
 module.exports.getStrategyPiecesTable = getStrategyPiecesTable;
 
-},{}],29:[function(require,module,exports){
+},{}],30:[function(require,module,exports){
 'use strict';
 
 var basic = require('./strategies/basic');
@@ -4062,7 +4195,7 @@ function getPieceScore(piece, strategy) {
 
 module.exports.getPositionScore = getPositionScore;
 module.exports.getPieceScore = getPieceScore;
-},{"./strategies/basic":27,"./strategies/random":28}],30:[function(require,module,exports){
+},{"./strategies/basic":28,"./strategies/random":29}],31:[function(require,module,exports){
 'use strict';
 
 var aiSearch = require('./evaluation/alpha-beta');
@@ -4102,5 +4235,5 @@ function playMoves(pgnMoves) {
 module.exports.play = playMoves;
 module.exports.playPosition = playPosition;
 
-},{"./evaluation/alpha-beta":25,"chess-rules":23}]},{},[30])(30)
+},{"./evaluation/alpha-beta":25,"chess-rules":23}]},{},[31])(31)
 });

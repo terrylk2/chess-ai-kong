@@ -2,6 +2,7 @@
 
 var chessRules = require('chess-rules');
 var evaluator = require('./evaluator');
+var sorter = require('./moves-sort');
 
 var searchDepth = 2;
 var currentStrategy = 'basic';
@@ -9,6 +10,8 @@ var currentStrategy = 'basic';
 //monitoring variables
 var cutoffs = [];
 var consoleTree = [];
+var nbNodeSearched = 0;
+var nbCutoffs = 0;
 
 /**
  * Set the strategy to use in the evaluation.
@@ -37,13 +40,17 @@ function getNextMove(position) {
     //monitoring initialization
     cutoffs.splice(0, cutoffs.length);
     consoleTree.splice(0, consoleTree.length);
+    nbNodeSearched = 0;
+    nbCutoffs = 0;
 
-    var alpha = -32767;
-    var beta = 32767;
+    var alpha = -1000000;
+    var beta = 1000000;
     var bestMove = null;
 
     var availableMoves = chessRules.getAvailableMoves(position);
+    availableMoves = sorter.sortMoves(availableMoves, position);
     availableMoves.some(function (move) {
+        nbNodeSearched++;
         var tmpPosition = chessRules.applyMove(position, move);
         var pgnMove = chessRules.moveToPgn(position, move);
         //console.log('-ROOT MOVE: ' + chessRules.moveToPgn(position, move));
@@ -68,6 +75,7 @@ function getNextMove(position) {
             //    move: pgnMove
             //});
             //console.log('Big cutoff!!!!!!!!');
+            nbCutoffs++;
             return true;
         }
 
@@ -86,31 +94,38 @@ function getNextMove(position) {
 
 function dumpLogs() {
 
-    var strings = ['--CUTOFFS--'];
-    cutoffs.forEach(function (cutoff) {
-        strings.push('\n');
-        strings.push('{'
-            + 'path: ' + cutoff.path
-            + ',alpha: ' + cutoff.alpha
-            + ',beta: ' + cutoff.beta
-            + ',score: ' + cutoff.score
-            + '}');
-    });
-    console.log(strings.join(''));
+    console.log(nbNodeSearched + ' node searched');
+    console.log(nbCutoffs + ' cut-offs');
+    var strings;
+    if(cutoffs.length > 0) {
+        strings = ['--CUTOFFS--'];
+        cutoffs.forEach(function (cutoff) {
+            strings.push('\n');
+            strings.push('{'
+                + 'path: ' + cutoff.path
+                + ',alpha: ' + cutoff.alpha
+                + ',beta: ' + cutoff.beta
+                + ',score: ' + cutoff.score
+                + '}');
+        });
+        console.log(strings.join(''));
+    }
 
-    strings = ['--TREE--'];
-    consoleTree.forEach(function (node) {
-        strings.push('\n');
-        strings.push('{'
-            + 'path: ' + node.path
-            + ',type: ' + node.type
-            + ',alpha: ' + node.alpha
-            + ',beta: ' + node.beta
-            + ',depth: ' + node.depth
-            + ',score: ' + node.score
-            + '}');
-    });
-    console.log(strings.join(''));
+    if(consoleTree.length > 0) {
+        strings = ['--TREE--'];
+        consoleTree.forEach(function (node) {
+            strings.push('\n');
+            strings.push('{'
+                + 'path: ' + node.path
+                + ',type: ' + node.type
+                + ',alpha: ' + node.alpha
+                + ',beta: ' + node.beta
+                + ',depth: ' + node.depth
+                + ',score: ' + node.score
+                + '}');
+        });
+        console.log(strings.join(''));
+    }
 }
 
 /**
@@ -125,6 +140,8 @@ function dumpLogs() {
  */
 function alphaBeta( position, alpha, beta, depth, path) {
 
+    nbNodeSearched++;
+
     if(depth == 0  || chessRules.getGameStatus(position) !== 'OPEN') {
         /**
          * TODO: Enhance with Quiescence algorithm.
@@ -133,10 +150,7 @@ function alphaBeta( position, alpha, beta, depth, path) {
     }
 
     var availableMoves = chessRules.getAvailableMoves(position);
-
-    /**
-     * TODO: Sort/Order moves (best first) to enhance the algorithm.
-     */
+    availableMoves = sorter.sortMoves(availableMoves, position);
 
     availableMoves.some(function (move) {
 
@@ -154,6 +168,7 @@ function alphaBeta( position, alpha, beta, depth, path) {
             //    beta: beta,
             //    move: pgnMove
             //});
+            nbCutoffs++;
             alpha = beta;
             return true;
         }

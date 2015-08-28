@@ -19,7 +19,7 @@ var _ = require('underscore');
 
 describe('ai-test-basic playPosition', function () {
     it('must provide a valid initial move as white', function () {
-
+        this.timeout(10000);
         var position = chessRules.getInitialPosition();
 
         var moveText = chessAI.playPosition(position);
@@ -40,7 +40,7 @@ describe('ai-test-basic playPosition', function () {
     });
 
      it('must provide a valid move in reply to first white move', function () {
-         this.timeout(4000);
+         this.timeout(10000);
          var position = chessRules.getInitialPosition();
          var moves = ['e4'];
 
@@ -68,6 +68,7 @@ describe('ai-test-basic playPosition', function () {
 
 describe('ai-test-basic play', function () {
     it('must provide a valid initial move as white', function () {
+        this.timeout(10000);
         var position = chessRules.getInitialPosition();
         var availableMoves = chessRules.getAvailableMoves(position);
 
@@ -88,7 +89,7 @@ describe('ai-test-basic play', function () {
     });
 
     it('must provide a valid move in reply to first white move', function () {
-        this.timeout(4000);
+        this.timeout(10000);
         var moves = ['e4'];
         var moveText = chessAI.play(moves);
 

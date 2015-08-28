@@ -30,6 +30,7 @@ describe('alpha-beta-basic drive position', function () {
         moveScore = evaluator.evaluatePosition(tmpPosition, 'basic');
         assert(initialScore <= moveScore, 'Not the best Black ' + pieceName + ' move (depth = ' + depth + ')!');
     }
+
     it('must provide the best move (position) for a Pawn', function () {
 
         var pwnW = {type: 'P', side: 'W'};
@@ -108,7 +109,7 @@ describe('alpha-beta-basic drive position', function () {
     });
 
     it('must provide the best move (position) for a Queen', function () {
-
+        this.timeout(4000);
         var queW = {type: 'Q', side: 'W'};
         var queB = {type: 'Q', side: 'B'};
         var position = chessRules.getInitialPosition();
