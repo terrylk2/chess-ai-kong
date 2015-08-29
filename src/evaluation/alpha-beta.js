@@ -49,6 +49,7 @@ function getNextMove(position) {
 
     var availableMoves = chessRules.getAvailableMoves(position);
     availableMoves = sorter.sortMoves(availableMoves, position);
+
     availableMoves.some(function (move) {
         nbNodeSearched++;
         var tmpPosition = chessRules.applyMove(position, move);
@@ -146,7 +147,7 @@ function alphaBeta( position, alpha, beta, depth, path) {
         /**
          * TODO: Enhance with Quiescence algorithm.
          */
-        return evaluator.evaluatePosition(position, currentStrategy);
+        return evaluator.evaluateBoard(position, currentStrategy);
     }
 
     var availableMoves = chessRules.getAvailableMoves(position);

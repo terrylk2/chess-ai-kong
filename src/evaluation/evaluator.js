@@ -1,46 +1,46 @@
 'use-strict';
 
-//var chessRules = require('chess-rules');
 var strategy = require('./strategy');
 
 /**
  * Evaluate the current position for the current player (turn).
+ *
  * @param position The current position and turn
  * @param strategyName The name of the strategy to use
  * @returns {number} The score (regarding the strategy currently set)
  */
-function evaluatePosition(position, strategyName) {
+function ratePositionAndPieces(position, strategyName) {
+
+    var score = 0;
+    var player = position.turn;
+
+    var ind;
+    for (ind = 0; ind < position.board.length; ind++) {
+        var currentPiece = position.board[ind];
+        if (currentPiece != null) {
+            if (currentPiece.side == player) {
+                score += strategy.getPieceScore(currentPiece, strategyName);
+                score += strategy.getPositionScore(currentPiece, ind, strategyName);
+            } else {
+                score -= strategy.getPieceScore(currentPiece, strategyName);
+                score -= strategy.getPositionScore(currentPiece, ind, strategyName);
+            }
+        }
+    }
+    return score;
+}
+
+/**
+ * Rate the attack (checks and castlings).
+ *
+ * @param position The current position and turn
+ * @returns {number} The score (regarding the strategy currently set)
+ */
+function rateAttack(position) {
 
     var score = 0;
     var player = position.turn;
     var opponent = position.turn === 'W' ? 'B' : 'W';
-
-    var row;
-    var col;
-    for (row = 7; row >= 0; row--) {
-        for (col = 0; col < 8; col++) {
-            var currentPiece = position.board[row * 8 + col];
-            if (currentPiece == null) {
-                continue;
-            } else {
-                if(currentPiece.side == player) {
-                    score += strategy.getPieceScore(currentPiece, strategyName);
-                    score += strategy.getPositionScore(
-                        currentPiece,
-                        row * 8 + col,
-                        strategyName
-                    );
-                } else {
-                    score -= strategy.getPieceScore(currentPiece, strategyName);
-                    score -= strategy.getPositionScore(
-                        currentPiece,
-                        row * 8 + col,
-                        strategyName
-                    );
-                }
-            }
-        }
-    }
 
     //Checks
     if(position.check) {
@@ -58,4 +58,15 @@ function evaluatePosition(position, strategyName) {
     return score;
 }
 
-module.exports.evaluatePosition = evaluatePosition;
+/**
+ * Evaluate the board for the current player (turn).
+ *
+ * @param currentPosition The current position and turn
+ * @param strategyName The name of the strategy to use
+ * @returns {number} The score (regarding the strategy currently set)
+ */
+function evaluateBoard(currentPosition, strategyName) {
+    return ratePositionAndPieces(currentPosition, strategyName) + rateAttack(currentPosition);
+}
+
+module.exports.evaluateBoard = evaluateBoard;

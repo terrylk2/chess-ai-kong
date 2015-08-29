@@ -3613,6 +3613,7 @@ function getNextMove(position) {
 
     var availableMoves = chessRules.getAvailableMoves(position);
     availableMoves = sorter.sortMoves(availableMoves, position);
+
     availableMoves.some(function (move) {
         nbNodeSearched++;
         var tmpPosition = chessRules.applyMove(position, move);
@@ -3710,7 +3711,7 @@ function alphaBeta( position, alpha, beta, depth, path) {
         /**
          * TODO: Enhance with Quiescence algorithm.
          */
-        return evaluator.evaluatePosition(position, currentStrategy);
+        return evaluator.evaluateBoard(position, currentStrategy);
     }
 
     var availableMoves = chessRules.getAvailableMoves(position);
@@ -3753,47 +3754,47 @@ module.exports.getNextMove = getNextMove;
 },{"./evaluator":26,"./moves-sort":27,"chess-rules":23}],26:[function(require,module,exports){
 'use-strict';
 
-//var chessRules = require('chess-rules');
 var strategy = require('./strategy');
 
 /**
  * Evaluate the current position for the current player (turn).
+ *
  * @param position The current position and turn
  * @param strategyName The name of the strategy to use
  * @returns {number} The score (regarding the strategy currently set)
  */
-function evaluatePosition(position, strategyName) {
+function ratePositionAndPieces(position, strategyName) {
+
+    var score = 0;
+    var player = position.turn;
+
+    var ind;
+    for (ind = 0; ind < position.board.length; ind++) {
+        var currentPiece = position.board[ind];
+        if (currentPiece != null) {
+            if (currentPiece.side == player) {
+                score += strategy.getPieceScore(currentPiece, strategyName);
+                score += strategy.getPositionScore(currentPiece, ind, strategyName);
+            } else {
+                score -= strategy.getPieceScore(currentPiece, strategyName);
+                score -= strategy.getPositionScore(currentPiece, ind, strategyName);
+            }
+        }
+    }
+    return score;
+}
+
+/**
+ * Rate the attack (checks and castlings).
+ *
+ * @param position The current position and turn
+ * @returns {number} The score (regarding the strategy currently set)
+ */
+function rateAttack(position) {
 
     var score = 0;
     var player = position.turn;
     var opponent = position.turn === 'W' ? 'B' : 'W';
-
-    var row;
-    var col;
-    for (row = 7; row >= 0; row--) {
-        for (col = 0; col < 8; col++) {
-            var currentPiece = position.board[row * 8 + col];
-            if (currentPiece == null) {
-                continue;
-            } else {
-                if(currentPiece.side == player) {
-                    score += strategy.getPieceScore(currentPiece, strategyName);
-                    score += strategy.getPositionScore(
-                        currentPiece,
-                        row * 8 + col,
-                        strategyName
-                    );
-                } else {
-                    score -= strategy.getPieceScore(currentPiece, strategyName);
-                    score -= strategy.getPositionScore(
-                        currentPiece,
-                        row * 8 + col,
-                        strategyName
-                    );
-                }
-            }
-        }
-    }
 
     //Checks
     if(position.check) {
@@ -3811,13 +3812,25 @@ function evaluatePosition(position, strategyName) {
     return score;
 }
 
-module.exports.evaluatePosition = evaluatePosition;
+/**
+ * Evaluate the board for the current player (turn).
+ *
+ * @param currentPosition The current position and turn
+ * @param strategyName The name of the strategy to use
+ * @returns {number} The score (regarding the strategy currently set)
+ */
+function evaluateBoard(currentPosition, strategyName) {
+    return ratePositionAndPieces(currentPosition, strategyName) + rateAttack(currentPosition);
+}
+
+module.exports.evaluateBoard = evaluateBoard;
 },{"./strategy":30}],27:[function(require,module,exports){
 'use strict';
 
 var chessRules = require('chess-rules');
-var strategy = require('./strategy');
 var evaluator = require('./evaluator');
+
+var currentStrategy = 'basic';
 
 function sortMoves(moves, position) {
 
@@ -3832,27 +3845,33 @@ function sortMoves(moves, position) {
         };
     }
 
-    fullMoves = quickSort(position, fullMoves, 0, fullMoves.length-1);
+    //Keep the rated moves in a array to not re-evaluate them many times during the sort
+    var ratedMoves = new Array(moves.length);
+    quickSort(position, fullMoves, 0, fullMoves.length-1, ratedMoves);
 
+    //var strings = ['-sorted moves = ['];
     var sortedMoves = new Array(moves.length);
     for(i=0; i<moves.length; i++) {
+        //strings.push('{'+ fullMoves[i].pgn+ ',' + ratedMoves[fullMoves[i].pgn]+ '} ');
         sortedMoves[i] = fullMoves[i].move;
-    };
+    }
+    //strings.push(']');
+    //console.log(strings.join(''));
 
     return sortedMoves;
 }
 
-function quickSort(position, fullMoves, lowInd, highInd) {
+function quickSort(position, fullMoves, lowInd, highInd, ratedMoves) {
 
     var i = lowInd;
     var j = highInd;
-    var pivot = rateMove(fullMoves[lowInd + Math.floor((highInd - lowInd) / 2)], position);
+    var pivot = rateMove(fullMoves[lowInd + Math.floor((highInd - lowInd) / 2)], position, ratedMoves);
 
     while (i <= j) {
-        while (rateMove(fullMoves[i], position) < pivot) {
+        while (rateMove(fullMoves[i], position, ratedMoves) < pivot) {
             i++;
         }
-        while (rateMove(fullMoves[j], position) > pivot) {
+        while (rateMove(fullMoves[j], position, ratedMoves) > pivot) {
             j--;
         }
         if (i <= j) {
@@ -3863,10 +3882,10 @@ function quickSort(position, fullMoves, lowInd, highInd) {
     }
 
     if (lowInd < j) {
-        fullMoves = quickSort(position, fullMoves, lowInd, j);
+        quickSort(position, fullMoves, lowInd, j, ratedMoves);
     }
     if (i < highInd) {
-        fullMoves = quickSort(position, fullMoves, i, highInd);
+        quickSort(position, fullMoves, i, highInd, ratedMoves);
     }
     return fullMoves;
 }
@@ -3877,60 +3896,20 @@ function swapMoves(moves, indA, indB) {
     moves[indB] = temp;
 }
 
-function rateAttack(move) {
+function rateMove(move, position, ratedMoves) {
+    var rate = ratedMoves[move.pgn];
 
-    var moveRate = 0;
-    if(move.pgn.indexOf('-')) {
-        //castling
-        moveRate += 40;
-    } else {
-        if(move.pgn.indexOf('x')) {
-            //capture
-            moveRate += 100;
-        }
-
-        if(move.pgn.indexOf('=')) {
-            //promotion
-            moveRate += 200;
-        }
+    if(!rate) {
+        var tmpPosition = chessRules.applyMove(position, move.move);
+        rate = evaluator.evaluateBoard(tmpPosition, currentStrategy);
+        ratedMoves[move.pgn]=rate;
     }
 
-    if(move.pgn.indexOf('+')) {
-        //check
-        moveRate += 500;
-    }
-
-    return moveRate;
-}
-
-function ratePosition(move, position) {
-    var currentPiece = position.board[move.move.src];
-    if (currentPiece == null) {
-        return 0;
-    } else {
-        return strategy.getPositionScore(
-            currentPiece,
-            move.move.dst,
-            'basic'
-        );
-    }
-}
-
-function ratePiece(move, position) {
-    var currentPiece = position.board[move.move.src];
-    return strategy.getPieceScore(
-        currentPiece,
-        'basic'
-    );
-}
-
-function rateMove(move, position) {
-    //Negate to sort from the best to the worst
-    return -(rateAttack(move) + ratePosition(move, position) + ratePiece(move, position));
+    return rate;
 }
 
 module.exports.sortMoves = sortMoves;
-},{"./evaluator":26,"./strategy":30,"chess-rules":23}],28:[function(require,module,exports){
+},{"./evaluator":26,"chess-rules":23}],28:[function(require,module,exports){
 'use strict';
 
 /**
