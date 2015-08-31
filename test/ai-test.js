@@ -6,9 +6,10 @@ var _ = require('underscore');
 
 //describe('AI computer challenge', function () {
 //    it('must provide a valid initial move as white', function () {
-//        this.timeout(150000);
+//        var plys = 20;
+//        this.timeout(plys*4000);
 //        var position = chessRules.getInitialPosition();
-//        for (var i=0; i<11; i++) {
+//        for (var i=0; i<plys; i++) {
 //            console.log(chessRules.positionToString(position, true));
 //            var moveText = chessAI.playPosition(position);
 //            var move = chessRules.pgnToMove(position, moveText);

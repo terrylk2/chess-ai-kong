@@ -1,7 +1,8 @@
 'use strict';
 
 var chessRules = require('chess-rules');
-var sorter = require('./moves-sort');
+var evaluator = require('./evaluator');
+var sorter = require('./quick-sort');
 
 var searchDepth = 2;
 var currentStrategy = 'basic';
@@ -29,6 +30,33 @@ function setDepth(depth) {
 }
 
 /**
+ * Evaluate each move based on the current position and depth.
+ *
+ * @param moves The array of available moves
+ * @param position The current position
+ * @param depth The current search depth
+ * @returns {Array} The array of evaluated moves (pgn, move, value)
+ */
+function evaluateMoves(moves, position, depth) {
+
+    var evaluatedMoves = new Array(moves.length);
+
+    var i;
+    for(i=0; i<moves.length; i++) {
+        var move = moves[i];
+        var tmpPosition = chessRules.applyMove(position, move);
+        var value =  evaluator.evaluateBoard(tmpPosition, moves.length, depth, currentStrategy);
+        evaluatedMoves[i] = {
+            pgn: chessRules.moveToPgn(position, move),
+            move: move,
+            value: value
+        };
+    }
+
+    return evaluatedMoves;
+}
+
+/**
  * Get the AI next move for the position passed in, this method follow the alpha beta max algorithm.
  * @param position The position and AI turn
  * @returns {*} The move
@@ -50,13 +78,15 @@ function getNextMove(position) {
     var alphaBetaData = {
         lastMove: null,
         moves: null,
-        path : 'root',
+        path : 'root'
     };
 
     //Get the available moves
     var availableMoves = chessRules.getAvailableMoves(position);
-    //Evaluate the moves and order them to enhance pruning
-    alphaBetaData.moves = sorter.sortMoves(availableMoves, position, searchDepth-1, currentStrategy);
+    //Evaluate the moves
+    var evaluatedMoves = evaluateMoves(availableMoves, position, searchDepth-1);
+    //Order moves to enhance pruning
+    alphaBetaData.moves = sorter.sortMoves(evaluatedMoves);
 
     alphaBetaData.moves.some(function (move) {
         nbNodeSearched++;
@@ -164,8 +194,10 @@ function alphaBeta(position, alpha, beta, depth, alphaBetaData) {
 
     //Get the available moves
     var availableMoves = chessRules.getAvailableMoves(position);
-    //Evaluate the moves and order them to enhance pruning
-    alphaBetaData.moves = sorter.sortMoves(availableMoves, position, depth-1, currentStrategy);
+    //Evaluate the moves
+    var evaluatedMoves = evaluateMoves(availableMoves, position, depth);
+    //Order moves to enhance pruning
+    alphaBetaData.moves = sorter.sortMoves(evaluatedMoves);
 
     alphaBetaData.moves.some(function (move) {
 
