@@ -4,49 +4,47 @@ var chessRules = require('chess-rules');
 var evaluator = require('./evaluator');
 
 var currentStrategy = 'basic';
+var currentDepth = 0;
+var currentMovesLength = -1;
 
-function sortMoves(moves, position) {
+function sortMoves(moves, position, depth, strategyName) {
 
-    var fullMoves = new Array(moves.length);
+    currentDepth = depth;
+    currentMovesLength = moves.length;
+    currentStrategy = strategyName;
+
+    var evaluatedMoves = new Array(moves.length);
 
     var i;
     for(i=0; i<moves.length; i++) {
         var move = moves[i];
-        fullMoves[i] = {
+        evaluatedMoves[i] = {
             pgn: chessRules.moveToPgn(position, move),
-            move: move
+            move: move,
+            //Value is updated by quick sort
+            value: null
         };
     }
 
-    //Keep the rated moves in a array to not re-evaluate them many times during the sort
-    var ratedMoves = new Array(moves.length);
-    quickSort(position, fullMoves, 0, fullMoves.length-1, ratedMoves);
-
-    //var strings = ['-sorted moves = ['];
-    var sortedMoves = new Array(moves.length);
-    for(i=0; i<moves.length; i++) {
-        //strings.push('{'+ fullMoves[i].pgn+ ',' + ratedMoves[fullMoves[i].pgn]+ '} ');
-        sortedMoves[i] = fullMoves[i].move;
-    }
-    //strings.push(']');
-    //console.log(strings.join(''));
-
-    return sortedMoves;
+    //Moves are evaluated during the sort
+    return quickSort(position, evaluatedMoves, 0, evaluatedMoves.length-1);
 }
 
-function quickSort(position, fullMoves, lowInd, highInd, ratedMoves) {
+function quickSort(position, fullMoves, lowInd, highInd) {
 
     var i = lowInd;
     var j = highInd;
-    var pivot = rateMove(fullMoves[lowInd + Math.floor((highInd - lowInd) / 2)], position, ratedMoves);
+    var pivot = rateMove(fullMoves[lowInd + Math.floor((highInd - lowInd) / 2)], position);
 
     while (i <= j) {
-        while (rateMove(fullMoves[i], position, ratedMoves) < pivot) {
+        while(rateMove(fullMoves[i], position) < pivot) {
             i++;
         }
-        while (rateMove(fullMoves[j], position, ratedMoves) > pivot) {
+
+        while(rateMove(fullMoves[j], position) > pivot) {
             j--;
         }
+
         if (i <= j) {
             swapMoves(fullMoves, i, j);
             i++;
@@ -55,10 +53,10 @@ function quickSort(position, fullMoves, lowInd, highInd, ratedMoves) {
     }
 
     if (lowInd < j) {
-        quickSort(position, fullMoves, lowInd, j, ratedMoves);
+        quickSort(position, fullMoves, lowInd, j);
     }
     if (i < highInd) {
-        quickSort(position, fullMoves, i, highInd, ratedMoves);
+        quickSort(position, fullMoves, i, highInd);
     }
     return fullMoves;
 }
@@ -69,16 +67,21 @@ function swapMoves(moves, indA, indB) {
     moves[indB] = temp;
 }
 
-function rateMove(move, position, ratedMoves) {
-    var rate = ratedMoves[move.pgn];
+/**
+ * Fill the value field of the move passed in if it does not exist and return the evaluated value.
+ *
+ * @param move The move to rate
+ * @param position The actual position
+ * @returns {*|number} The move evaluation
+ */
+function rateMove(move, position) {
 
-    if(!rate) {
+    if(!move.value) {
         var tmpPosition = chessRules.applyMove(position, move.move);
-        rate = evaluator.evaluateBoard(tmpPosition, currentStrategy);
-        ratedMoves[move.pgn]=rate;
+        move.value = evaluator.evaluateBoard(tmpPosition, currentMovesLength, currentDepth, currentStrategy);
     }
 
-    return rate;
+    return move.value;
 }
 
 module.exports.sortMoves = sortMoves;

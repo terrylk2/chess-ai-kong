@@ -1,7 +1,6 @@
 'use strict';
 
 var chessRules = require('chess-rules');
-var evaluator = require('./evaluator');
 var sorter = require('./moves-sort');
 
 var searchDepth = 2;
@@ -47,18 +46,29 @@ function getNextMove(position) {
     var beta = 1000000;
     var bestMove = null;
 
-    var availableMoves = chessRules.getAvailableMoves(position);
-    availableMoves = sorter.sortMoves(availableMoves, position);
+    //Initialize the data for AlphaBeta Search
+    var alphaBetaData = {
+        lastMove: null,
+        moves: null,
+        path : 'root',
+    };
 
-    availableMoves.some(function (move) {
+    //Get the available moves
+    var availableMoves = chessRules.getAvailableMoves(position);
+    //Evaluate the moves and order them to enhance pruning
+    alphaBetaData.moves = sorter.sortMoves(availableMoves, position, searchDepth-1, currentStrategy);
+
+    alphaBetaData.moves.some(function (move) {
         nbNodeSearched++;
-        var tmpPosition = chessRules.applyMove(position, move);
-        var pgnMove = chessRules.moveToPgn(position, move);
+
+        var nextPosition = chessRules.applyMove(position, move.move);
+        alphaBetaData.lastMove = move;
+        alphaBetaData.path = move.pgn;
+
         //console.log('-ROOT MOVE: ' + chessRules.moveToPgn(position, move));
-        var score = -alphaBeta(tmpPosition, -beta, -alpha, searchDepth - 1, pgnMove);
+        var score = -alphaBeta(nextPosition, -beta, -alpha, searchDepth - 1, alphaBetaData);
         //consoleTree.push({
-        //        path: pgnMove,
-        //        type: 'min',
+        //        path: alphaBetaData.path,
         //        alpha: alpha,
         //        beta: beta,
         //        depth: searchDepth-1,
@@ -69,11 +79,11 @@ function getNextMove(position) {
         if(score >= beta) {
             //Cut-off
             //cutoffs.push({
-            //    path: pgnMove,
+            //    path: alphaBetaData.path,
             //    score: score,
             //    alpha: alpha,
             //    beta: beta,
-            //    move: pgnMove
+            //    move: move.pgn
             //});
             //console.log('Big cutoff!!!!!!!!');
             nbCutoffs++;
@@ -84,13 +94,13 @@ function getNextMove(position) {
             //we have found a better best move (a new max)
             alpha = score;
             bestMove = move;
-            //console.log('New root best move: ' + chessRules.moveToPgn(position, bestMove));
+            //console.log('New root best move: ' + bestMove.pgn);
         }
         return false;
     });
 
     //dumpLogs();
-    return bestMove == null ? null : chessRules.moveToPgn(position, bestMove);
+    return bestMove == null ? null : bestMove.pgn;
 }
 
 function dumpLogs() {
@@ -118,7 +128,7 @@ function dumpLogs() {
             strings.push('\n');
             strings.push('{'
                 + 'path: ' + node.path
-                + ',type: ' + node.type
+                + ',type: ' + (node.depth%2 === 1 ? 'min' : 'max')
                 + ',alpha: ' + node.alpha
                 + ',beta: ' + node.beta
                 + ',depth: ' + node.depth
@@ -136,38 +146,52 @@ function dumpLogs() {
  * @param alpha The current best score
  * @param beta The current worst score
  * @param depth The depth
- * @param path The path (succession of moves) of the recursive algorithm
+ * @param alphaBetaData Data gathered at recursion depth+1
  * @returns {number} The score evaluated
  */
-function alphaBeta( position, alpha, beta, depth, path) {
+function alphaBeta(position, alpha, beta, depth, alphaBetaData) {
 
+    var path = alphaBetaData.path;
     nbNodeSearched++;
 
     if(depth == 0  || chessRules.getGameStatus(position) !== 'OPEN') {
         /**
          * TODO: Enhance with Quiescence algorithm.
          */
-        return evaluator.evaluateBoard(position, currentStrategy);
+        //Move has already been evaluated by the sort algorithm in the previous run
+        return alphaBetaData.lastMove.value;
     }
 
+    //Get the available moves
     var availableMoves = chessRules.getAvailableMoves(position);
-    availableMoves = sorter.sortMoves(availableMoves, position);
+    //Evaluate the moves and order them to enhance pruning
+    alphaBetaData.moves = sorter.sortMoves(availableMoves, position, depth-1, currentStrategy);
 
-    availableMoves.some(function (move) {
+    alphaBetaData.moves.some(function (move) {
 
-        var tmpPosition = chessRules.applyMove(position, move);
-        var pgnMove = chessRules.moveToPgn(position, move);
-        var score = -alphaBeta( tmpPosition, -beta, -alpha, depth - 1, path + '-' + pgnMove);
+        var nextPosition = chessRules.applyMove(position, move.move);
+        //Update alphaBeta data to pass on
+        alphaBetaData.lastMove = move;
+        alphaBetaData.path = path + '-' + move.pgn;
+
+        var score = -alphaBeta(nextPosition, -beta, -alpha, depth - 1, alphaBetaData);
+        //consoleTree.push({
+        //        path: alphaBetaData.path,
+        //        alpha: alpha,
+        //        beta: beta,
+        //        depth: depth - 1,
+        //        score: score}
+        //);
 
         //Cut off
         if (score >= beta) {
             //Cut-off
             //cutoffs.push({
-            //    path: pgnMove,
+            //    path: alphaBetaData.path,
             //    score: score,
             //    alpha: alpha,
             //    beta: beta,
-            //    move: pgnMove
+            //    move: move.pgn
             //});
             nbCutoffs++;
             alpha = beta;
