@@ -4171,19 +4171,22 @@ module.exports.getStrategyPiecesTable = getStrategyPiecesTable;
 var basic = require('./strategies/basic');
 var random = require('./strategies/random');
 
+var strategyPositions = {
+    'basic': basic.getStrategyPositionTable,
+    'random': random.getStrategyPositionTable
+};
+var strategyPieces = {
+    'basic': basic.getStrategyPiecesTable,
+    'random': random.getStrategyPiecesTable
+};
+
 /**
  * Get the strategy table with the scores per piece positions.
  * @param name The name of the strategy
  * @returns {*} The table
  */
 function getStrategyPositionTable(name) {
-    var strategy = null;
-    if ('basic' === name) {
-        strategy = basic.getStrategyPositionTable();
-    } else {
-        strategy = random.getStrategyPositionTable();
-    }
-    return strategy;
+    return strategyPositions[name]();
 }
 
 /**
@@ -4192,13 +4195,7 @@ function getStrategyPositionTable(name) {
  * @returns {*} The table
  */
 function getStrategyPiecesTable(name) {
-    var strategy = null;
-    if ('basic' === name) {
-        strategy = basic.getStrategyPiecesTable();
-    } else {
-        strategy = random.getStrategyPiecesTable();
-    }
-    return strategy;
+    return strategyPieces[name]();
 }
 
 /**
