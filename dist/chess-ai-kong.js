@@ -3930,14 +3930,14 @@ function quickSort(fullMoves, lowInd, highInd) {
 
     var i = lowInd;
     var j = highInd;
-    var pivot = fullMoves[lowInd + Math.floor((highInd - lowInd) / 2)].value;
+    var pivot = checkValue(fullMoves[lowInd + Math.floor((highInd - lowInd) / 2)]);
 
     while (i <= j) {
-        while(fullMoves[i].value < pivot) {
+        while(checkValue(fullMoves[i]) < pivot) {
             i++;
         }
 
-        while(fullMoves[j].value > pivot) {
+        while(checkValue(fullMoves[j]) > pivot) {
             j--;
         }
 
@@ -3955,6 +3955,18 @@ function quickSort(fullMoves, lowInd, highInd) {
         quickSort(fullMoves, i, highInd);
     }
     return fullMoves;
+}
+
+function checkValue(move) {
+
+    if(move.value === undefined) {
+        throw new Error("move.value is undefined");
+    }
+    if(move.value === null) {
+        throw new Error("move.value is null");
+    }
+
+    return move.value;
 }
 
 function swapMoves(moves, indA, indB) {

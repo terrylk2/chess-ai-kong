@@ -1,6 +1,6 @@
 'use strict';
 var assert = require('assert');
-var strategy = require('../../../src/evaluation/strategy');
+var strategy = require('../../src/evaluation/strategy');
 
 describe('strategy-basic', function () {
 
