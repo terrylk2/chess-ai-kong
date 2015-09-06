@@ -1,6 +1,6 @@
 {
   "name": "chess-ai-kong",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "description": "Chess AI based on Alpha-Beta pruning algorithm.",
   "homepage": "https://github.com/chesscorp/chess-ai-kong",
   "author": {
