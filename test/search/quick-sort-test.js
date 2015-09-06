@@ -1,6 +1,6 @@
 'use strict';
 var assert = require('assert');
-var quickSort = require('../../src/evaluation/quick-sort');
+var quickSort = require('../../src/search/quick-sort');
 
 describe('quick-sort', function () {
 

@@ -1,6 +1,6 @@
 'use strict';
 
-var aiSearch = require('./evaluation/alpha-beta');
+var aiSearch = require('./search/alpha-beta');
 var chessRules = require('chess-rules');
 
 aiSearch.setStrategy('basic');

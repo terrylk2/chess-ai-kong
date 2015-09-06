@@ -3562,255 +3562,10 @@ process.chdir = function (dir) {
 process.umask = function() { return 0; };
 
 },{}],25:[function(require,module,exports){
-'use strict';
-
-var chessRules = require('chess-rules');
-var evaluator = require('./evaluator');
-var sorter = require('./quick-sort');
-
-var searchDepth = 2;
-var currentStrategy = 'basic';
-
-//monitoring variables
-var cutoffs = [];
-var consoleTree = [];
-var nbNodeSearched = 0;
-var nbCutoffs = 0;
-
-/**
- * Set the strategy to use in the evaluation.
- * @param strategyName The strategy name ('basic' by default, 'random')
- */
-function setStrategy(strategyName) {
-    currentStrategy = strategyName;
-}
-
-/**
- * Set the depth of the alpha-beta algorithm.
- * @param depth The depth (2 by default)
- */
-function setDepth(depth) {
-    searchDepth = depth;
-}
-
-/**
- * Evaluate each move based on the current position and depth.
- *
- * @param moves The array of available moves
- * @param position The current position
- * @param depth The current search depth
- * @returns {Array} The array of evaluated moves (pgn, move, value)
- */
-function evaluateMoves(moves, position, depth) {
-
-    var evaluatedMoves = new Array(moves.length);
-
-    var i;
-    for(i=0; i<moves.length; i++) {
-        var move = moves[i];
-        var tmpPosition = chessRules.applyMove(position, move);
-        var value =  evaluator.evaluateBoard(tmpPosition, moves.length, depth, currentStrategy);
-        evaluatedMoves[i] = {
-            pgn: chessRules.moveToPgn(position, move),
-            move: move,
-            value: value
-        };
-    }
-
-    return evaluatedMoves;
-}
-
-/**
- * Get the AI next move for the position passed in, this method follow the alpha beta max algorithm.
- * @param position The position and AI turn
- * @returns {*} The move
- */
-function getNextMove(position) {
-    //console.log('getNextMove ['+ position.turn + ']');
-
-    //monitoring initialization
-    cutoffs.splice(0, cutoffs.length);
-    consoleTree.splice(0, consoleTree.length);
-    nbNodeSearched = 0;
-    nbCutoffs = 0;
-
-    var alpha = -1000000;
-    var beta = 1000000;
-    var bestMove = null;
-
-    //Initialize the data for AlphaBeta Search
-    var alphaBetaData = {
-        lastMove: null,
-        moves: null,
-        path : 'root'
-    };
-
-    //Get the available moves
-    var availableMoves = chessRules.getAvailableMoves(position);
-    //Evaluate the moves
-    var evaluatedMoves = evaluateMoves(availableMoves, position, searchDepth-1);
-    //Order moves to enhance pruning
-    alphaBetaData.moves = sorter.sortMoves(evaluatedMoves);
-
-    alphaBetaData.moves.some(function (move) {
-        nbNodeSearched++;
-
-        var nextPosition = chessRules.applyMove(position, move.move);
-        alphaBetaData.lastMove = move;
-        alphaBetaData.path = move.pgn;
-
-        //console.log('-ROOT MOVE: ' + chessRules.moveToPgn(position, move));
-        var score = -alphaBeta(nextPosition, -beta, -alpha, searchDepth - 1, alphaBetaData);
-        //consoleTree.push({
-        //        path: alphaBetaData.path,
-        //        alpha: alpha,
-        //        beta: beta,
-        //        depth: searchDepth-1,
-        //        score: score}
-        //);
-
-        //Use of alpha-beta max for the first step
-        if(score >= beta) {
-            //Cut-off
-            //cutoffs.push({
-            //    path: alphaBetaData.path,
-            //    score: score,
-            //    alpha: alpha,
-            //    beta: beta,
-            //    move: move.pgn
-            //});
-            //console.log('Big cutoff!!!!!!!!');
-            nbCutoffs++;
-            return true;
-        }
-
-        if(score > alpha) {
-            //we have found a better best move (a new max)
-            alpha = score;
-            bestMove = move;
-            //console.log('New root best move: ' + bestMove.pgn);
-        }
-        return false;
-    });
-
-    //dumpLogs();
-    return bestMove == null ? null : bestMove.pgn;
-}
-
-function dumpLogs() {
-
-    console.log(nbNodeSearched + ' node searched');
-    console.log(nbCutoffs + ' cut-offs');
-    var strings;
-    if(cutoffs.length > 0) {
-        strings = ['--CUTOFFS--'];
-        cutoffs.forEach(function (cutoff) {
-            strings.push('\n');
-            strings.push('{'
-                + 'path: ' + cutoff.path
-                + ',alpha: ' + cutoff.alpha
-                + ',beta: ' + cutoff.beta
-                + ',score: ' + cutoff.score
-                + '}');
-        });
-        console.log(strings.join(''));
-    }
-
-    if(consoleTree.length > 0) {
-        strings = ['--TREE--'];
-        consoleTree.forEach(function (node) {
-            strings.push('\n');
-            strings.push('{'
-                + 'path: ' + node.path
-                + ',type: ' + (node.depth%2 === 1 ? 'min' : 'max')
-                + ',alpha: ' + node.alpha
-                + ',beta: ' + node.beta
-                + ',depth: ' + node.depth
-                + ',score: ' + node.score
-                + '}');
-        });
-        console.log(strings.join(''));
-    }
-}
-
-/**
- * Single alpha-beta algorithm (Negamax).
- *
- * @param position The current position
- * @param alpha The current best score
- * @param beta The current worst score
- * @param depth The depth
- * @param alphaBetaData Data gathered at recursion depth+1
- * @returns {number} The score evaluated
- */
-function alphaBeta(position, alpha, beta, depth, alphaBetaData) {
-
-    var path = alphaBetaData.path;
-    nbNodeSearched++;
-
-    if(depth == 0  || chessRules.getGameStatus(position) !== 'OPEN') {
-        /**
-         * TODO: Enhance with Quiescence algorithm.
-         */
-        //Move has already been evaluated by the sort algorithm in the previous run
-        return alphaBetaData.lastMove.value;
-    }
-
-    //Get the available moves
-    var availableMoves = chessRules.getAvailableMoves(position);
-    //Evaluate the moves
-    var evaluatedMoves = evaluateMoves(availableMoves, position, depth);
-    //Order moves to enhance pruning
-    alphaBetaData.moves = sorter.sortMoves(evaluatedMoves);
-
-    alphaBetaData.moves.some(function (move) {
-
-        var nextPosition = chessRules.applyMove(position, move.move);
-        //Update alphaBeta data to pass on
-        alphaBetaData.lastMove = move;
-        alphaBetaData.path = path + '-' + move.pgn;
-
-        var score = -alphaBeta(nextPosition, -beta, -alpha, depth - 1, alphaBetaData);
-        //consoleTree.push({
-        //        path: alphaBetaData.path,
-        //        alpha: alpha,
-        //        beta: beta,
-        //        depth: depth - 1,
-        //        score: score}
-        //);
-
-        //Cut off
-        if (score >= beta) {
-            //Cut-off
-            //cutoffs.push({
-            //    path: alphaBetaData.path,
-            //    score: score,
-            //    alpha: alpha,
-            //    beta: beta,
-            //    move: move.pgn
-            //});
-            nbCutoffs++;
-            alpha = beta;
-            return true;
-        }
-
-        //we have found a better best move
-        if(score > alpha) {
-            alpha = score;
-        }
-        return false;
-    });
-
-    return alpha;
-}
-
-module.exports.setDepth = setDepth;
-module.exports.setStrategy = setStrategy;
-module.exports.getNextMove = getNextMove;
-},{"./evaluator":26,"./quick-sort":27,"chess-rules":23}],26:[function(require,module,exports){
 'use-strict';
 
 var strategy = require('./strategy');
+var monitor = require('./../monitoring/monitoring');
 
 var castlingRate = 100;
 var checkRate = 75;
@@ -3867,6 +3622,7 @@ function rateDefense(position) {
  * Rate the Movability including checks and stale situations.
  *
  * @param position The current position and turn
+ * @param The number of available moves
  * @param depth The depth in the search algorithm
  * @param playerTurn True if the function is called to rate the player's turn, false if opponent
  * @returns {number} The score (regarding the strategy currently set)
@@ -3896,10 +3652,12 @@ function rateMovability(position, movesLength, depth, playerTurn) {
  *
  * @param moveLength The number of moves
  * @param currentPosition The current position and turn
+ * @param depth the depth in the search algorithm
  * @param strategyName The name of the strategy to use
  * @returns {number} The score (regarding the strategy currently set)
  */
 function evaluateBoard(currentPosition, moveLength, depth, strategyName) {
+    monitor.startWatch('evaluateBoard');
     var score = ratePositionAndPieces(currentPosition, strategyName);
     score += rateDefense(currentPosition);
     score += rateMovability(currentPosition, moveLength, depth, true);
@@ -3908,75 +3666,12 @@ function evaluateBoard(currentPosition, moveLength, depth, strategyName) {
     score -= rateDefense(currentPosition);
     score -= rateMovability(currentPosition, moveLength, depth, false);
     currentPosition.turn = currentPosition.turn === 'W' ? 'B' : 'W';
+    monitor.stopWatch('evaluateBoard');
     return score;
 }
 
 module.exports.evaluateBoard = evaluateBoard;
-},{"./strategy":30}],27:[function(require,module,exports){
-'use strict';
-
-/**
- * Sort the list of evaluated moves passed in.
- *
- * @param evaluatedMoves The array of evaluated moves
- * @returns {*} The list of evaluated moves sorted
- */
-function sortMoves(evaluatedMoves) {
-
-    return quickSort(evaluatedMoves, 0, evaluatedMoves.length-1);
-}
-
-function quickSort(fullMoves, lowInd, highInd) {
-
-    var i = lowInd;
-    var j = highInd;
-    var pivot = checkValue(fullMoves[lowInd + Math.floor((highInd - lowInd) / 2)]);
-
-    while (i <= j) {
-        while(checkValue(fullMoves[i]) < pivot) {
-            i++;
-        }
-
-        while(checkValue(fullMoves[j]) > pivot) {
-            j--;
-        }
-
-        if (i <= j) {
-            swapMoves(fullMoves, i, j);
-            i++;
-            j--;
-        }
-    }
-
-    if (lowInd < j) {
-        quickSort(fullMoves, lowInd, j);
-    }
-    if (i < highInd) {
-        quickSort(fullMoves, i, highInd);
-    }
-    return fullMoves;
-}
-
-function checkValue(move) {
-
-    if(move.value === undefined) {
-        throw new Error("move.value is undefined");
-    }
-    if(move.value === null) {
-        throw new Error("move.value is null");
-    }
-
-    return move.value;
-}
-
-function swapMoves(moves, indA, indB) {
-    var temp = moves[indA];
-    moves[indA] = moves[indB];
-    moves[indB] = temp;
-}
-
-module.exports.sortMoves = sortMoves;
-},{}],28:[function(require,module,exports){
+},{"./../monitoring/monitoring":30,"./strategy":28}],26:[function(require,module,exports){
 'use strict';
 
 /**
@@ -4075,7 +3770,7 @@ function getStrategyPiecesTable() {
 module.exports.getStrategyPositionTable = getStrategyPositionTable;
 module.exports.getStrategyPiecesTable = getStrategyPiecesTable;
 
-},{}],29:[function(require,module,exports){
+},{}],27:[function(require,module,exports){
 'use strict';
 
 /**
@@ -4165,7 +3860,7 @@ function getStrategyPiecesTable() {
 module.exports.getStrategyPositionTable = getStrategyPositionTable;
 module.exports.getStrategyPiecesTable = getStrategyPiecesTable;
 
-},{}],30:[function(require,module,exports){
+},{}],28:[function(require,module,exports){
 'use strict';
 
 var basic = require('./strategies/basic');
@@ -4238,10 +3933,10 @@ function getPieceScore(piece, strategy) {
 
 module.exports.getPositionScore = getPositionScore;
 module.exports.getPieceScore = getPieceScore;
-},{"./strategies/basic":28,"./strategies/random":29}],31:[function(require,module,exports){
+},{"./strategies/basic":26,"./strategies/random":27}],29:[function(require,module,exports){
 'use strict';
 
-var aiSearch = require('./evaluation/alpha-beta');
+var aiSearch = require('./search/alpha-beta');
 var chessRules = require('chess-rules');
 
 aiSearch.setStrategy('basic');
@@ -4278,5 +3973,571 @@ function playMoves(pgnMoves) {
 module.exports.play = playMoves;
 module.exports.playPosition = playPosition;
 
-},{"./evaluation/alpha-beta":25,"chess-rules":23}]},{},[31])(31)
+},{"./search/alpha-beta":33,"chess-rules":23}],30:[function(require,module,exports){
+'use strict';
+
+var cutoffs = [];
+var consoleTree = [];
+var nbNodeSearched = 0;
+var nbCutoffs = 0;
+
+var watches = require('./watches');
+var enabled = true;
+
+function setEnabled(enabledFlag) {
+    enabled = enabledFlag;
+}
+
+/**
+ * Add a cutoff node.
+ *
+ * @param path The node path
+ * @param alpha The alpha
+ * @param beta The beta
+ * @param score The score
+ */
+function addCutoffNode(path, alpha, beta, depth, score) {
+    cutoffs.push({
+        path: path,
+        alpha: depth%2 === 0 ? alpha : beta,
+        beta: depth%2 === 0 ? beta : alpha,
+        score: score,
+    });
+}
+
+
+/**
+ * Add a search node.
+ *
+ * @param path The node path
+ * @param alpha The alpha
+ * @param beta The beta
+ * @param score The score
+ */
+function addSearchNode(path, alpha, beta, depth, score) {
+    consoleTree.push(
+        {
+            path: path,
+            alpha: alpha,
+            beta: beta,
+            depth: depth,
+            score: score
+        }
+    );
+}
+
+/**
+ * Start the watch. If the watch does not exist, iy is created.
+ *
+ * @param itemKey The watch key
+ */
+function startWatch(itemKey) {
+    if(enabled) {
+       watches.startWatch(itemKey)
+    }
+}
+
+/**
+ * Stop the watch.
+ *
+ * @param itemKey The watch key
+ */
+function stopWatch(itemKey) {
+    if(enabled) {
+        watches.stopWatch(itemKey)
+    }
+}
+
+/**
+ * Reset all monitoring variables.
+ */
+function reset() {
+
+    if(enabled) {
+        cutoffs.splice(0, cutoffs.length);
+        consoleTree.splice(0, consoleTree.length);
+        nbNodeSearched = 0;
+        nbCutoffs = 0;
+
+        watches.reset();
+    }
+}
+
+/**
+ * Clear all monitoring devices.
+ */
+function clear() {
+    if (enabled) {
+
+        cutoffs.splice(0, cutoffs.length);
+        consoleTree.splice(0, consoleTree.length);
+        nbNodeSearched = 0;
+        nbCutoffs = 0;
+
+        watches.clear();
+    }
+}
+
+function dumpLogs(full) {
+    if (enabled) {
+
+        console.log(nbNodeSearched + ' node searched');
+        console.log(nbCutoffs + ' cut-offs');
+
+        //Log watches
+        watches.dumpLogs();
+
+        if(full) {
+            var strings;
+            if (cutoffs.length > 0) {
+                strings = ['--CUTOFFS--'];
+                cutoffs.forEach(function (cutoff) {
+                    strings.push('\n');
+                    strings.push('{'
+                        + 'path: ' + cutoff.path
+                        + ',alpha: ' + cutoff.alpha
+                        + ',beta: ' + cutoff.beta
+                        + ',score: ' + cutoff.score
+                        + '}');
+                });
+                console.log(strings.join(''));
+            }
+
+            if (consoleTree.length > 0) {
+                strings = ['--TREE--'];
+                consoleTree.forEach(function (node) {
+                    strings.push('\n');
+                    strings.push('{'
+                        + 'path: ' + node.path
+                        + ',type: ' + (node.depth % 2 === 1 ? 'min' : 'max')
+                        + ',alpha: ' + node.alpha
+                        + ',beta: ' + node.beta
+                        + ',score: ' + node.score
+                        + '}');
+                });
+                console.log(strings.join(''));
+            }
+        }
+    }
+}
+
+module.exports.addSearchNode = addSearchNode;
+module.exports.addCutoffNode = addCutoffNode;
+module.exports.setEnabled = setEnabled;
+module.exports.startWatch = startWatch;
+module.exports.stopWatch = stopWatch;
+module.exports.dumpLogs = dumpLogs;
+module.exports.clear = clear;
+module.exports.reset = reset;
+},{"./watches":32}],31:[function(require,module,exports){
+'use strict';
+
+function StopWatch(startAt, duration, startCount) {
+    this.startAt = startAt ? startAt : 0;
+    this.duration = duration ? duration : 0;
+    this.startCount = startCount ? startCount : 0;
+}
+
+StopWatch.prototype.start = function () {
+    this.startAt = new Date().getTime();
+    this.startCount++;
+};
+
+StopWatch.prototype.stop = function () {
+    this.duration += new Date().getTime()- this.startAt;
+};
+
+StopWatch.prototype.reset = function () {
+    this.duration = 0;
+    this.startAt = 0;
+    this.startCount = 0;
+};
+
+StopWatch.prototype.watchToString = function () {
+    return this.startCount + 'x, ' + this.duration + 'ms';
+};
+
+module.exports = {
+    StopWatch: StopWatch
+};
+},{}],32:[function(require,module,exports){
+'use strict';
+
+var StopWatch = require('./stopwatch').StopWatch;
+var watches = new Object();
+
+/**
+ * Add a watch with the key passed in.
+ *
+ * @param itemKey The key
+ */
+function addWatch(itemKey) {
+    watches[itemKey] = new StopWatch(0,0,0);
+}
+
+/**
+ * Start the watch. If the watch does not exist, iy is created.
+ *
+ * @param itemKey The watch key
+ */
+function startWatch(itemKey) {
+    if(!watches[itemKey]) {
+        addWatch(itemKey);
+    }
+    watches[itemKey].start();
+}
+
+/**
+ * Stop the watch.
+ *
+ * @param itemKey The watch key
+ */
+function stopWatch(itemKey) {
+    watches[itemKey].stop();
+}
+
+/**
+ * Get the watch from the key.
+ * @param itemKey The watch key
+ * @returns {*} The watch
+ */
+function getWatch(itemKey) {
+    if(watches[itemKey]) {
+        return new StopWatch(watches[itemKey].startAt, watches[itemKey].duration, watches[itemKey].startCount);
+    } else {
+        return undefined;
+    }
+}
+
+/**
+ * Reset a watch to 0.
+ *
+ * @param itemKey The watch key
+ */
+function resetWatch(itemKey) {
+    if(!watches[itemKey]) {
+        addWatch(itemKey);
+    } else {
+        watches[itemKey].reset();
+    }
+}
+
+/**
+ * Clear all the watches.
+ */
+function clearWatches() {
+    var keys = [];
+    for (var watch in watches) {
+        keys.push(watch);
+    }
+
+    keys.forEach(function (key) {
+        delete watches[key];
+    });
+}
+
+/**
+ * Reset the watches.
+ */
+function resetWatches() {
+    for (var watch in watches) {
+        watches[watch].reset();
+    }
+}
+
+function resetAll() {
+    resetWatches();
+}
+
+/**
+ * Clear all monitoring devices.
+ */
+function clearAll() {
+    clearWatches();
+}
+
+function dumpLogs() {
+    for (var watch in watches) {
+        console.log('[' + watch + '] ' + watches[watch].watchToString());
+    }
+}
+
+module.exports.startWatch = startWatch;
+module.exports.stopWatch = stopWatch;
+module.exports.getWatch = getWatch;
+module.exports.resetWatch = resetWatch;
+module.exports.clear = clearAll;
+module.exports.reset = resetAll;
+module.exports.dumpLogs = dumpLogs;
+
+},{"./stopwatch":31}],33:[function(require,module,exports){
+'use strict';
+
+var chessRules = require('chess-rules');
+var evaluator = require('./../evaluation/evaluator');
+var sorter = require('./quick-sort');
+var _monitor = require('./../monitoring/monitoring');
+
+var aiDepth = 2;
+var aiStrategy = 'basic';
+
+/**
+ * Set the strategy to use in the evaluation.
+ * @param strategyName The strategy name ('basic' by default, 'random')
+ */
+function setStrategy(strategyName) {
+    aiStrategy = strategyName;
+}
+
+/**
+ * Set the depth of the alpha-beta algorithm.
+ * @param depth The depth (2 by default)
+ */
+function setDepth(depth) {
+    aiDepth = depth;
+}
+
+/**
+ * Evaluate each move based on the current position and depth.
+ *
+ * @param moves The array of available moves
+ * @param position The current position
+ * @param depth The current search depth
+ * @returns {Array} The array of evaluated moves (pgn, move, value)
+ */
+function evaluateMoves(moves, position, depth) {
+
+    _monitor.startWatch('evaluateMoves');
+    var evaluatedMoves = new Array(moves.length);
+
+    var i;
+    for (i = 0; i < moves.length; i++) {
+        var move = moves[i];
+        _monitor.startWatch('applyMove');
+        var tmpPosition = chessRules.applyMove(position, move);
+        _monitor.stopWatch('applyMove');
+        var value = evaluator.evaluateBoard(tmpPosition, moves.length, depth, aiStrategy);
+        evaluatedMoves[i] = {
+            pgn: chessRules.moveToPgn(position, move),
+            move: move,
+            value: value
+        };
+    }
+
+    _monitor.stopWatch('evaluateMoves');
+    return evaluatedMoves;
+}
+
+/**
+ * Get the AI next move for the position passed in, this method follow the alpha beta max algorithm.
+ * @param position The position and AI turn
+ * @returns {*} The move
+ */
+function getNextMove(position) {
+    //console.log('getNextMove ['+ position.turn + ']');
+    _monitor.clear();
+    _monitor.startWatch('setup');
+
+    var alpha = -1000000;
+    var beta = 1000000;
+    var bestMove = null;
+
+    //Initialize the data for AlphaBeta Search
+    var alphaBetaData = {
+        lastMove: null,
+        moves: null,
+        path: 'root',
+        startTime: new Date().getTime()
+    };
+    _monitor.stopWatch('setup');
+
+    //Get the available moves
+    _monitor.startWatch('availableMoves');
+    var availableMoves = chessRules.getAvailableMoves(position);
+    _monitor.stopWatch('availableMoves');
+
+    //Evaluate the moves
+    var evaluatedMoves = evaluateMoves(availableMoves, position, aiDepth-1);
+
+    //Order moves to enhance pruning
+    alphaBetaData.moves = sorter.sortMoves(evaluatedMoves);
+
+    alphaBetaData.moves.some(function (move) {
+
+        _monitor.startWatch('applyMove');
+        var nextPosition = chessRules.applyMove(position, move.move);
+        _monitor.stopWatch('applyMove');
+        alphaBetaData.lastMove = move;
+        alphaBetaData.path = move.pgn;
+
+        //console.log('-ROOT MOVE: ' + chessRules.moveToPgn(position, move));
+        var score = -alphaBeta(nextPosition, -beta, -alpha, aiDepth - 1, alphaBetaData);
+        _monitor.addSearchNode(move.pgn, -beta, -alpha, aiDepth-1, score);
+
+        //Use of alpha-beta max for the first step
+        if(score >= beta) {
+            //Cut-off
+            _monitor.addCutoffNode(alphaBetaData.path, alpha, beta, score);
+            _monitor.stopWatch('return');
+            return true;
+        }
+
+        if(score > alpha) {
+            //we have found a better best move (a new max)
+            alpha = score;
+            bestMove = move;
+            //console.log('New root best move: ' + bestMove.pgn);
+        }
+        _monitor.stopWatch('return');
+        return false;
+    });
+
+    _monitor.dumpLogs(true);
+    return bestMove == null ? null : bestMove.pgn;
+}
+
+function isTerminal(position) {
+    return chessRules.getGameStatus(position) !== 'OPEN';
+}
+
+/**
+ * Single alpha-beta algorithm (Negamax).
+ *
+ * @param position The current position
+ * @param alpha The current best score
+ * @param beta The current worst score
+ * @param depth The depth
+ * @param alphaBetaData Data gathered at recursion depth+1
+ * @returns {number} The score evaluated
+ */
+function alphaBeta(position, alpha, beta, depth, alphaBetaData) {
+
+    var path = alphaBetaData.path;
+
+    if(depth == 0
+        || isTerminal(position)) {
+        /**
+         * TODO: Enhance with Quiescence algorithm.
+         */
+        _monitor.startWatch('return');
+        //Move has already been evaluated by the sort algorithm in the previous run
+        return alphaBetaData.lastMove.value;
+    }
+
+    //Get the available moves
+    _monitor.startWatch('availableMoves');
+    var availableMoves = chessRules.getAvailableMoves(position);
+    _monitor.stopWatch('availableMoves');
+
+    //Evaluate the moves
+    var evaluatedMoves = evaluateMoves(availableMoves, position, depth);
+
+    //Order moves to enhance pruning
+    alphaBetaData.moves = sorter.sortMoves(evaluatedMoves);
+
+    alphaBetaData.moves.some(function (move) {
+
+        _monitor.startWatch('applyMove');
+        var nextPosition = chessRules.applyMove(position, move.move);
+        _monitor.stopWatch('applyMove');
+
+        //Update alphaBeta data to pass on
+        alphaBetaData.lastMove = move;
+        alphaBetaData.path = path + '-' + move.pgn;
+
+        var score = -alphaBeta(nextPosition, -beta, -alpha, depth - 1, alphaBetaData);
+        _monitor.addSearchNode(path + '-' + move.pgn, -beta, -alpha, depth - 1, score);
+
+        //Cut off
+        if (score >= beta) {
+            _monitor.addCutoffNode(path + '-' + move.pgn, alpha, beta, depth - 1, score);
+            alpha = beta;
+            _monitor.stopWatch('return');
+            return true;
+        }
+
+        //we have found a better best move
+        if(score > alpha) {
+            alpha = score;
+        }
+        _monitor.stopWatch('return');
+        return false;
+    });
+
+    return alpha;
+}
+
+module.exports.setDepth = setDepth;
+module.exports.setStrategy = setStrategy;
+module.exports.setTimeout = setTimeout;
+module.exports.getNextMove = getNextMove;
+},{"./../evaluation/evaluator":25,"./../monitoring/monitoring":30,"./quick-sort":34,"chess-rules":23}],34:[function(require,module,exports){
+'use strict';
+var monitor = require('./../monitoring/monitoring');
+
+/**
+ * Sort the list of evaluated moves passed in.
+ *
+ * @param evaluatedMoves The array of evaluated moves
+ * @returns {*} The list of evaluated moves sorted
+ */
+function sortMoves(evaluatedMoves) {
+
+    monitor.startWatch('sortMoves');
+    var evaluatedMoves = quickSort(evaluatedMoves, 0, evaluatedMoves.length-1);
+    monitor.stopWatch('sortMoves');
+    return evaluatedMoves;
+}
+
+function quickSort(fullMoves, lowInd, highInd) {
+
+    var i = lowInd;
+    var j = highInd;
+    var pivot = checkValue(fullMoves[lowInd + Math.floor((highInd - lowInd) / 2)]);
+
+    while (i <= j) {
+        while(checkValue(fullMoves[i]) < pivot) {
+            i++;
+        }
+
+        while(checkValue(fullMoves[j]) > pivot) {
+            j--;
+        }
+
+        if (i <= j) {
+            swapMoves(fullMoves, i, j);
+            i++;
+            j--;
+        }
+    }
+
+    if (lowInd < j) {
+        quickSort(fullMoves, lowInd, j);
+    }
+    if (i < highInd) {
+        quickSort(fullMoves, i, highInd);
+    }
+    return fullMoves;
+}
+
+function checkValue(move) {
+
+    if(move.value === undefined) {
+        throw new Error("move.value is undefined");
+    }
+    if(move.value === null) {
+        throw new Error("move.value is null");
+    }
+
+    return move.value;
+}
+
+function swapMoves(moves, indA, indB) {
+    var temp = moves[indA];
+    moves[indA] = moves[indB];
+    moves[indB] = temp;
+}
+
+module.exports.sortMoves = sortMoves;
+},{"./../monitoring/monitoring":30}]},{},[29])(29)
 });

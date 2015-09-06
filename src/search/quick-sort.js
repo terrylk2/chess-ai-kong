@@ -1,4 +1,5 @@
 'use strict';
+var monitor = require('./../monitoring/monitoring');
 
 /**
  * Sort the list of evaluated moves passed in.
@@ -8,7 +9,10 @@
  */
 function sortMoves(evaluatedMoves) {
 
-    return quickSort(evaluatedMoves, 0, evaluatedMoves.length-1);
+    monitor.startWatch('sortMoves');
+    var evaluatedMoves = quickSort(evaluatedMoves, 0, evaluatedMoves.length-1);
+    monitor.stopWatch('sortMoves');
+    return evaluatedMoves;
 }
 
 function quickSort(fullMoves, lowInd, highInd) {

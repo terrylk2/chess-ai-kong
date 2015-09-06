@@ -1,6 +1,6 @@
 'use strict';
 var assert = require('assert');
-var alphaBeta = require('../../src/evaluation/alpha-beta');
+var alphaBeta = require('../../src/search/alpha-beta');
 var evaluator = require('../../src/evaluation/evaluator');
 var chessRules = require('chess-rules');
 
