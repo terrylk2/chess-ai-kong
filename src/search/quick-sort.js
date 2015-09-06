@@ -1,5 +1,5 @@
 'use strict';
-var monitor = require('./../monitoring/monitoring');
+var _monitor = require('./../monitoring/monitoring');
 
 /**
  * Sort the list of evaluated moves passed in.
@@ -9,9 +9,9 @@ var monitor = require('./../monitoring/monitoring');
  */
 function sortMoves(evaluatedMoves) {
 
-    monitor.startWatch('sortMoves');
+    _monitor.startWatch('sortMoves');
     var evaluatedMoves = quickSort(evaluatedMoves, 0, evaluatedMoves.length-1);
-    monitor.stopWatch('sortMoves');
+    _monitor.stopWatch('sortMoves');
     return evaluatedMoves;
 }
 

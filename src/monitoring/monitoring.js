@@ -6,7 +6,7 @@ var nbNodeSearched = 0;
 var nbCutoffs = 0;
 
 var watches = require('./watches');
-var enabled = true;
+var enabled = false;
 
 function setEnabled(enabledFlag) {
     enabled = enabledFlag;
@@ -21,12 +21,14 @@ function setEnabled(enabledFlag) {
  * @param score The score
  */
 function addCutoffNode(path, alpha, beta, depth, score) {
-    cutoffs.push({
-        path: path,
-        alpha: depth%2 === 0 ? alpha : beta,
-        beta: depth%2 === 0 ? beta : alpha,
-        score: score,
-    });
+    if(enabled) {
+        cutoffs.push({
+            path: path,
+            alpha: depth % 2 === 0 ? alpha : beta,
+            beta: depth % 2 === 0 ? beta : alpha,
+            score: score,
+        });
+    }
 }
 
 
@@ -39,15 +41,17 @@ function addCutoffNode(path, alpha, beta, depth, score) {
  * @param score The score
  */
 function addSearchNode(path, alpha, beta, depth, score) {
-    consoleTree.push(
-        {
-            path: path,
-            alpha: alpha,
-            beta: beta,
-            depth: depth,
-            score: score
-        }
-    );
+    if(enabled) {
+        consoleTree.push(
+            {
+                path: path,
+                alpha: alpha,
+                beta: beta,
+                depth: depth,
+                score: score
+            }
+        );
+    }
 }
 
 /**
@@ -105,8 +109,8 @@ function clear() {
 function dumpLogs(full) {
     if (enabled) {
 
-        console.log(nbNodeSearched + ' node searched');
-        console.log(nbCutoffs + ' cut-offs');
+        console.log(consoleTree.length + ' node searched');
+        console.log(cutoffs.length + ' cut-offs');
 
         //Log watches
         watches.dumpLogs();

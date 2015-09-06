@@ -3565,7 +3565,7 @@ process.umask = function() { return 0; };
 'use-strict';
 
 var strategy = require('./strategy');
-var monitor = require('./../monitoring/monitoring');
+var _monitor = require('./../monitoring/monitoring');
 
 var castlingRate = 100;
 var checkRate = 75;
@@ -3622,7 +3622,7 @@ function rateDefense(position) {
  * Rate the Movability including checks and stale situations.
  *
  * @param position The current position and turn
- * @param The number of available moves
+ * @param movesLength The number of available moves
  * @param depth The depth in the search algorithm
  * @param playerTurn True if the function is called to rate the player's turn, false if opponent
  * @returns {number} The score (regarding the strategy currently set)
@@ -3657,7 +3657,7 @@ function rateMovability(position, movesLength, depth, playerTurn) {
  * @returns {number} The score (regarding the strategy currently set)
  */
 function evaluateBoard(currentPosition, moveLength, depth, strategyName) {
-    monitor.startWatch('evaluateBoard');
+    _monitor.startWatch('evaluateBoard');
     var score = ratePositionAndPieces(currentPosition, strategyName);
     score += rateDefense(currentPosition);
     score += rateMovability(currentPosition, moveLength, depth, true);
@@ -3666,7 +3666,7 @@ function evaluateBoard(currentPosition, moveLength, depth, strategyName) {
     score -= rateDefense(currentPosition);
     score -= rateMovability(currentPosition, moveLength, depth, false);
     currentPosition.turn = currentPosition.turn === 'W' ? 'B' : 'W';
-    monitor.stopWatch('evaluateBoard');
+    _monitor.stopWatch('evaluateBoard');
     return score;
 }
 
@@ -3982,7 +3982,7 @@ var nbNodeSearched = 0;
 var nbCutoffs = 0;
 
 var watches = require('./watches');
-var enabled = true;
+var enabled = false;
 
 function setEnabled(enabledFlag) {
     enabled = enabledFlag;
@@ -3997,12 +3997,14 @@ function setEnabled(enabledFlag) {
  * @param score The score
  */
 function addCutoffNode(path, alpha, beta, depth, score) {
-    cutoffs.push({
-        path: path,
-        alpha: depth%2 === 0 ? alpha : beta,
-        beta: depth%2 === 0 ? beta : alpha,
-        score: score,
-    });
+    if(enabled) {
+        cutoffs.push({
+            path: path,
+            alpha: depth % 2 === 0 ? alpha : beta,
+            beta: depth % 2 === 0 ? beta : alpha,
+            score: score,
+        });
+    }
 }
 
 
@@ -4015,15 +4017,17 @@ function addCutoffNode(path, alpha, beta, depth, score) {
  * @param score The score
  */
 function addSearchNode(path, alpha, beta, depth, score) {
-    consoleTree.push(
-        {
-            path: path,
-            alpha: alpha,
-            beta: beta,
-            depth: depth,
-            score: score
-        }
-    );
+    if(enabled) {
+        consoleTree.push(
+            {
+                path: path,
+                alpha: alpha,
+                beta: beta,
+                depth: depth,
+                score: score
+            }
+        );
+    }
 }
 
 /**
@@ -4081,8 +4085,8 @@ function clear() {
 function dumpLogs(full) {
     if (enabled) {
 
-        console.log(nbNodeSearched + ' node searched');
-        console.log(nbCutoffs + ' cut-offs');
+        console.log(consoleTree.length + ' node searched');
+        console.log(cutoffs.length + ' cut-offs');
 
         //Log watches
         watches.dumpLogs();
@@ -4279,7 +4283,17 @@ var sorter = require('./quick-sort');
 var _monitor = require('./../monitoring/monitoring');
 
 var aiDepth = 2;
+var aiTimeout = 10000;
 var aiStrategy = 'basic';
+
+/**
+ * Set the timeout around which the search shall return a move.
+ *
+ * @param timeout The timeout in millisecond
+ */
+function setTimeout(timeout) {
+    aiTimeout = timeout;
+}
 
 /**
  * Set the strategy to use in the evaluation.
@@ -4313,9 +4327,9 @@ function evaluateMoves(moves, position, depth) {
     var i;
     for (i = 0; i < moves.length; i++) {
         var move = moves[i];
-        _monitor.startWatch('applyMove');
+        _monitor.startWatch('evaluateMoves-applyMove');
         var tmpPosition = chessRules.applyMove(position, move);
-        _monitor.stopWatch('applyMove');
+        _monitor.stopWatch('evaluateMoves-applyMove');
         var value = evaluator.evaluateBoard(tmpPosition, moves.length, depth, aiStrategy);
         evaluatedMoves[i] = {
             pgn: chessRules.moveToPgn(position, move),
@@ -4336,6 +4350,7 @@ function evaluateMoves(moves, position, depth) {
 function getNextMove(position) {
     //console.log('getNextMove ['+ position.turn + ']');
     _monitor.clear();
+    _monitor.startWatch('getNextMove');
     _monitor.startWatch('setup');
 
     var alpha = -1000000;
@@ -4392,6 +4407,7 @@ function getNextMove(position) {
         return false;
     });
 
+    _monitor.stopWatch('getNextMove');
     _monitor.dumpLogs(true);
     return bestMove == null ? null : bestMove.pgn;
 }
@@ -4415,7 +4431,9 @@ function alphaBeta(position, alpha, beta, depth, alphaBetaData) {
     var path = alphaBetaData.path;
 
     if(depth == 0
+        || new Date().getTime() - alphaBetaData.startTime > aiTimeout*0.98-200
         || isTerminal(position)) {
+
         /**
          * TODO: Enhance with Quiescence algorithm.
          */
@@ -4473,7 +4491,7 @@ module.exports.setTimeout = setTimeout;
 module.exports.getNextMove = getNextMove;
 },{"./../evaluation/evaluator":25,"./../monitoring/monitoring":30,"./quick-sort":34,"chess-rules":23}],34:[function(require,module,exports){
 'use strict';
-var monitor = require('./../monitoring/monitoring');
+var _monitor = require('./../monitoring/monitoring');
 
 /**
  * Sort the list of evaluated moves passed in.
@@ -4483,9 +4501,9 @@ var monitor = require('./../monitoring/monitoring');
  */
 function sortMoves(evaluatedMoves) {
 
-    monitor.startWatch('sortMoves');
+    _monitor.startWatch('sortMoves');
     var evaluatedMoves = quickSort(evaluatedMoves, 0, evaluatedMoves.length-1);
-    monitor.stopWatch('sortMoves');
+    _monitor.stopWatch('sortMoves');
     return evaluatedMoves;
 }
 

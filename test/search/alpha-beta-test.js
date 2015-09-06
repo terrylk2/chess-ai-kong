@@ -309,3 +309,23 @@ describe('alpha-beta-basic end', function () {
         assert(chessRules.getGameStatus(position) === 'WHITEWON', 'Not the best move!');
     });
 });
+
+describe('alpha-beta-basic timeout', function () {
+
+    it('must provide a move with a timeout', function () {
+        this.timeout(11000);
+        alphaBeta.setTimeout(10000);
+        alphaBeta.setDepth(9);
+
+        var position = chessRules.getInitialPosition();
+
+        var before = new Date().getTime();
+        var moveText = alphaBeta.getNextMove(position);
+        var getNextMoveTime = new Date().getTime() - before;
+        console.log('getNextMoveTime: ' + getNextMoveTime);
+
+        assert(moveText !== null);
+        assert(getNextMoveTime <= 10500);
+        assert(getNextMoveTime >= 9500);
+    });
+});

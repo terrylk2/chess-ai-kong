@@ -13,7 +13,6 @@ describe('watches', function () {
         watches.stopWatch('test1');
         wrapTime = new Date().getTime() - wrapTime;
 
-        console.log(watches.getWatch('test1').watchToString());
         assert(wrapTime >= watches.getWatch('test1').duration);
         assert(watches.getWatch('test1').startCount === 1);
 
@@ -23,7 +22,6 @@ describe('watches', function () {
         watches.stopWatch('test1');
         wrapTime = new Date().getTime() - wrapTime;
 
-        console.log(watches.getWatch('test1').watchToString());
         assert(wrapTime < watches.getWatch('test1').duration);
         assert(watches.getWatch('test1').startCount === 2);
     });

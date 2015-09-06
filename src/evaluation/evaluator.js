@@ -1,7 +1,7 @@
 'use-strict';
 
 var strategy = require('./strategy');
-var monitor = require('./../monitoring/monitoring');
+var _monitor = require('./../monitoring/monitoring');
 
 var castlingRate = 100;
 var checkRate = 75;
@@ -58,7 +58,7 @@ function rateDefense(position) {
  * Rate the Movability including checks and stale situations.
  *
  * @param position The current position and turn
- * @param The number of available moves
+ * @param movesLength The number of available moves
  * @param depth The depth in the search algorithm
  * @param playerTurn True if the function is called to rate the player's turn, false if opponent
  * @returns {number} The score (regarding the strategy currently set)
@@ -93,7 +93,7 @@ function rateMovability(position, movesLength, depth, playerTurn) {
  * @returns {number} The score (regarding the strategy currently set)
  */
 function evaluateBoard(currentPosition, moveLength, depth, strategyName) {
-    monitor.startWatch('evaluateBoard');
+    _monitor.startWatch('evaluateBoard');
     var score = ratePositionAndPieces(currentPosition, strategyName);
     score += rateDefense(currentPosition);
     score += rateMovability(currentPosition, moveLength, depth, true);
@@ -102,7 +102,7 @@ function evaluateBoard(currentPosition, moveLength, depth, strategyName) {
     score -= rateDefense(currentPosition);
     score -= rateMovability(currentPosition, moveLength, depth, false);
     currentPosition.turn = currentPosition.turn === 'W' ? 'B' : 'W';
-    monitor.stopWatch('evaluateBoard');
+    _monitor.stopWatch('evaluateBoard');
     return score;
 }
 

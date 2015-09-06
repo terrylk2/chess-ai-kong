@@ -6,7 +6,17 @@ var sorter = require('./quick-sort');
 var _monitor = require('./../monitoring/monitoring');
 
 var aiDepth = 2;
+var aiTimeout = 10000;
 var aiStrategy = 'basic';
+
+/**
+ * Set the timeout around which the search shall return a move.
+ *
+ * @param timeout The timeout in millisecond
+ */
+function setTimeout(timeout) {
+    aiTimeout = timeout;
+}
 
 /**
  * Set the strategy to use in the evaluation.
@@ -40,9 +50,9 @@ function evaluateMoves(moves, position, depth) {
     var i;
     for (i = 0; i < moves.length; i++) {
         var move = moves[i];
-        _monitor.startWatch('applyMove');
+        _monitor.startWatch('evaluateMoves-applyMove');
         var tmpPosition = chessRules.applyMove(position, move);
-        _monitor.stopWatch('applyMove');
+        _monitor.stopWatch('evaluateMoves-applyMove');
         var value = evaluator.evaluateBoard(tmpPosition, moves.length, depth, aiStrategy);
         evaluatedMoves[i] = {
             pgn: chessRules.moveToPgn(position, move),
@@ -63,6 +73,7 @@ function evaluateMoves(moves, position, depth) {
 function getNextMove(position) {
     //console.log('getNextMove ['+ position.turn + ']');
     _monitor.clear();
+    _monitor.startWatch('getNextMove');
     _monitor.startWatch('setup');
 
     var alpha = -1000000;
@@ -119,6 +130,7 @@ function getNextMove(position) {
         return false;
     });
 
+    _monitor.stopWatch('getNextMove');
     _monitor.dumpLogs(true);
     return bestMove == null ? null : bestMove.pgn;
 }
@@ -142,7 +154,9 @@ function alphaBeta(position, alpha, beta, depth, alphaBetaData) {
     var path = alphaBetaData.path;
 
     if(depth == 0
+        || new Date().getTime() - alphaBetaData.startTime > aiTimeout*0.98-200
         || isTerminal(position)) {
+
         /**
          * TODO: Enhance with Quiescence algorithm.
          */
