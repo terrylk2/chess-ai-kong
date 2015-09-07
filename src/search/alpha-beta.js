@@ -53,6 +53,9 @@ function evaluateMoves(moves, position, depth) {
         _monitor.startWatch('evaluateMoves-applyMove');
         var tmpPosition = chessRules.applyMove(position, move);
         _monitor.stopWatch('evaluateMoves-applyMove');
+        /**
+         * TODO: Fix the moves.length as it should be the number of available moves for the new position.
+         */
         var value = evaluator.evaluateBoard(tmpPosition, moves.length, depth, aiStrategy);
         evaluatedMoves[i] = {
             pgn: chessRules.moveToPgn(position, move),
@@ -109,13 +112,15 @@ function getNextMove(position) {
         alphaBetaData.path = move.pgn;
 
         //console.log('-ROOT MOVE: ' + chessRules.moveToPgn(position, move));
+        //var score = alphaBetaMin(nextPosition, alpha, beta, aiDepth - 1, alphaBetaData);
         var score = -alphaBeta(nextPosition, -beta, -alpha, aiDepth - 1, alphaBetaData);
-        _monitor.addSearchNode(move.pgn, -beta, -alpha, aiDepth-1, score);
+        _monitor.addSearchNode(move.pgn, alpha, beta, 0, score);
 
         //Use of alpha-beta max for the first step
         if(score >= beta) {
             //Cut-off
-            _monitor.addCutoffNode(alphaBetaData.path, alpha, beta, score);
+            _monitor.addCutoffNode(alphaBetaData.path, alpha, beta, 0, score);
+            alpha = beta;
             _monitor.stopWatch('return');
             return true;
         }
@@ -187,11 +192,11 @@ function alphaBeta(position, alpha, beta, depth, alphaBetaData) {
         alphaBetaData.path = path + '-' + move.pgn;
 
         var score = -alphaBeta(nextPosition, -beta, -alpha, depth - 1, alphaBetaData);
-        _monitor.addSearchNode(path + '-' + move.pgn, -beta, -alpha, depth - 1, score);
+        _monitor.addSearchNode(path + '-' + move.pgn, alpha, beta, aiDepth-depth, score);
 
         //Cut off
         if (score >= beta) {
-            _monitor.addCutoffNode(path + '-' + move.pgn, alpha, beta, depth - 1, score);
+            _monitor.addCutoffNode(path + '-' + move.pgn, alpha, beta, aiDepth-depth, score);
             alpha = beta;
             _monitor.stopWatch('return');
             return true;

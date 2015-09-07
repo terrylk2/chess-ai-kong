@@ -3994,16 +3994,32 @@ function setEnabled(enabledFlag) {
  * @param path The node path
  * @param alpha The alpha
  * @param beta The beta
+ * @param depth The current depth of the search (0 being the first step)
  * @param score The score
  */
 function addCutoffNode(path, alpha, beta, depth, score) {
     if(enabled) {
-        cutoffs.push({
-            path: path,
-            alpha: depth % 2 === 0 ? alpha : beta,
-            beta: depth % 2 === 0 ? beta : alpha,
-            score: score,
-        });
+        if(depth%2==1) {
+            cutoffs.push(
+                {
+                    path: path,
+                    alpha: -beta,
+                    beta: -alpha,
+                    depth: depth,
+                    score: -score
+                }
+            );
+        } else {
+            cutoffs.push(
+                {
+                    path: path,
+                    alpha: alpha,
+                    beta: beta,
+                    depth: depth,
+                    score: score
+                }
+            );
+        }
     }
 }
 
@@ -4014,19 +4030,32 @@ function addCutoffNode(path, alpha, beta, depth, score) {
  * @param path The node path
  * @param alpha The alpha
  * @param beta The beta
+ * @param depth The current depth of the search (0 being the first step)
  * @param score The score
  */
 function addSearchNode(path, alpha, beta, depth, score) {
     if(enabled) {
-        consoleTree.push(
-            {
-                path: path,
-                alpha: alpha,
-                beta: beta,
-                depth: depth,
-                score: score
-            }
-        );
+        if(depth%2 == 1) {
+            consoleTree.push(
+                {
+                    path: path,
+                    alpha: -beta,
+                    beta: -alpha,
+                    depth: depth,
+                    score: -score
+                }
+            );
+        } else {
+            consoleTree.push(
+                {
+                    path: path,
+                    alpha: alpha,
+                    beta: beta,
+                    depth: depth,
+                    score: score
+                }
+            );
+        }
     }
 }
 
@@ -4099,9 +4128,10 @@ function dumpLogs(full) {
                     strings.push('\n');
                     strings.push('{'
                         + 'path: ' + cutoff.path
-                        + ',alpha: ' + cutoff.alpha
-                        + ',beta: ' + cutoff.beta
-                        + ',score: ' + cutoff.score
+                        + ', type: ' + (cutoff.depth % 2 === 1 ? 'min' : 'max')
+                        + ', alpha: ' + cutoff.alpha
+                        + ', beta: ' + cutoff.beta
+                        + ', score: ' + cutoff.score
                         + '}');
                 });
                 console.log(strings.join(''));
@@ -4113,10 +4143,10 @@ function dumpLogs(full) {
                     strings.push('\n');
                     strings.push('{'
                         + 'path: ' + node.path
-                        + ',type: ' + (node.depth % 2 === 1 ? 'min' : 'max')
-                        + ',alpha: ' + node.alpha
-                        + ',beta: ' + node.beta
-                        + ',score: ' + node.score
+                        + ', type: ' + (node.depth % 2 === 1 ? 'min' : 'max')
+                        + ', alpha: ' + node.alpha
+                        + ', beta: ' + node.beta
+                        + ', score: ' + node.score
                         + '}');
                 });
                 console.log(strings.join(''));
@@ -4330,6 +4360,9 @@ function evaluateMoves(moves, position, depth) {
         _monitor.startWatch('evaluateMoves-applyMove');
         var tmpPosition = chessRules.applyMove(position, move);
         _monitor.stopWatch('evaluateMoves-applyMove');
+        /**
+         * TODO: Fix the moves.length as it should be the number of available moves for the new position.
+         */
         var value = evaluator.evaluateBoard(tmpPosition, moves.length, depth, aiStrategy);
         evaluatedMoves[i] = {
             pgn: chessRules.moveToPgn(position, move),
@@ -4386,13 +4419,15 @@ function getNextMove(position) {
         alphaBetaData.path = move.pgn;
 
         //console.log('-ROOT MOVE: ' + chessRules.moveToPgn(position, move));
+        //var score = alphaBetaMin(nextPosition, alpha, beta, aiDepth - 1, alphaBetaData);
         var score = -alphaBeta(nextPosition, -beta, -alpha, aiDepth - 1, alphaBetaData);
-        _monitor.addSearchNode(move.pgn, -beta, -alpha, aiDepth-1, score);
+        _monitor.addSearchNode(move.pgn, alpha, beta, 0, score);
 
         //Use of alpha-beta max for the first step
         if(score >= beta) {
             //Cut-off
-            _monitor.addCutoffNode(alphaBetaData.path, alpha, beta, score);
+            _monitor.addCutoffNode(alphaBetaData.path, alpha, beta, 0, score);
+            alpha = beta;
             _monitor.stopWatch('return');
             return true;
         }
@@ -4464,11 +4499,11 @@ function alphaBeta(position, alpha, beta, depth, alphaBetaData) {
         alphaBetaData.path = path + '-' + move.pgn;
 
         var score = -alphaBeta(nextPosition, -beta, -alpha, depth - 1, alphaBetaData);
-        _monitor.addSearchNode(path + '-' + move.pgn, -beta, -alpha, depth - 1, score);
+        _monitor.addSearchNode(path + '-' + move.pgn, alpha, beta, aiDepth-depth, score);
 
         //Cut off
         if (score >= beta) {
-            _monitor.addCutoffNode(path + '-' + move.pgn, alpha, beta, depth - 1, score);
+            _monitor.addCutoffNode(path + '-' + move.pgn, alpha, beta, aiDepth-depth, score);
             alpha = beta;
             _monitor.stopWatch('return');
             return true;

@@ -18,16 +18,32 @@ function setEnabled(enabledFlag) {
  * @param path The node path
  * @param alpha The alpha
  * @param beta The beta
+ * @param depth The current depth of the search (0 being the first step)
  * @param score The score
  */
 function addCutoffNode(path, alpha, beta, depth, score) {
     if(enabled) {
-        cutoffs.push({
-            path: path,
-            alpha: depth % 2 === 0 ? alpha : beta,
-            beta: depth % 2 === 0 ? beta : alpha,
-            score: score,
-        });
+        if(depth%2==1) {
+            cutoffs.push(
+                {
+                    path: path,
+                    alpha: -beta,
+                    beta: -alpha,
+                    depth: depth,
+                    score: -score
+                }
+            );
+        } else {
+            cutoffs.push(
+                {
+                    path: path,
+                    alpha: alpha,
+                    beta: beta,
+                    depth: depth,
+                    score: score
+                }
+            );
+        }
     }
 }
 
@@ -38,19 +54,32 @@ function addCutoffNode(path, alpha, beta, depth, score) {
  * @param path The node path
  * @param alpha The alpha
  * @param beta The beta
+ * @param depth The current depth of the search (0 being the first step)
  * @param score The score
  */
 function addSearchNode(path, alpha, beta, depth, score) {
     if(enabled) {
-        consoleTree.push(
-            {
-                path: path,
-                alpha: alpha,
-                beta: beta,
-                depth: depth,
-                score: score
-            }
-        );
+        if(depth%2 == 1) {
+            consoleTree.push(
+                {
+                    path: path,
+                    alpha: -beta,
+                    beta: -alpha,
+                    depth: depth,
+                    score: -score
+                }
+            );
+        } else {
+            consoleTree.push(
+                {
+                    path: path,
+                    alpha: alpha,
+                    beta: beta,
+                    depth: depth,
+                    score: score
+                }
+            );
+        }
     }
 }
 
@@ -123,9 +152,10 @@ function dumpLogs(full) {
                     strings.push('\n');
                     strings.push('{'
                         + 'path: ' + cutoff.path
-                        + ',alpha: ' + cutoff.alpha
-                        + ',beta: ' + cutoff.beta
-                        + ',score: ' + cutoff.score
+                        + ', type: ' + (cutoff.depth % 2 === 1 ? 'min' : 'max')
+                        + ', alpha: ' + cutoff.alpha
+                        + ', beta: ' + cutoff.beta
+                        + ', score: ' + cutoff.score
                         + '}');
                 });
                 console.log(strings.join(''));
@@ -137,10 +167,10 @@ function dumpLogs(full) {
                     strings.push('\n');
                     strings.push('{'
                         + 'path: ' + node.path
-                        + ',type: ' + (node.depth % 2 === 1 ? 'min' : 'max')
-                        + ',alpha: ' + node.alpha
-                        + ',beta: ' + node.beta
-                        + ',score: ' + node.score
+                        + ', type: ' + (node.depth % 2 === 1 ? 'min' : 'max')
+                        + ', alpha: ' + node.alpha
+                        + ', beta: ' + node.beta
+                        + ', score: ' + node.score
                         + '}');
                 });
                 console.log(strings.join(''));
