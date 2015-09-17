@@ -3,7 +3,7 @@
 var strategy = require('./strategy');
 var _monitor = require('./../monitoring/monitoring');
 
-//var castlingRate = 40;
+var castlingRate = 40;
 var checkRate = 100;
 //var checkMateRate = 200000;
 //var staleMateRate = 150000;
@@ -31,35 +31,35 @@ function ratePositionAndPieces(position, strategyName) {
     return score;
 }
 
-///**
-// * Rate the defense (castlings).
-// *
-// * @param position The current position and turn
-// * @returns {number} The score (regarding the strategy currently set)
-// */
-//function rateKingSafety(position) {
-//
-//    var score = 0;
-//
-//    /**
-//     * TODO: increase the score for castled kings.
-//     */
-//    //Castlings: if castled, increase the score
-//    //if(castled) {
-//    //    score += castlingRate;
-//    //} else {
-//        //Castlings: if castling is not possible anymore, reduce the score
-//        if(!position.castlingFlags[position.turn].K) {
-//            score -= castlingRate;
-//        }
-//
-//        if(!position.castlingFlags[position.turn].Q) {
-//            score -= castlingRate;
-//        }
-//    //}
-//
-//    return score;
-//}
+/**
+ * Rate the defense (castlings).
+ *
+ * @param position The current position and turn
+ * @returns {number} The score (regarding the strategy currently set)
+ */
+function rateKingSafety(position) {
+
+    var score = 0;
+
+    /**
+     * TODO: increase the score for castled kings.
+     */
+    //Castlings: if castled, increase the score
+    //if(castled) {
+    //    score += castlingRate;
+    //} else {
+        //Castlings: if castling is not possible anymore, reduce the score
+        if(!position.castlingFlags[position.turn].K) {
+            score -= castlingRate;
+        }
+
+        if(!position.castlingFlags[position.turn].Q) {
+            score -= castlingRate;
+        }
+    //}
+
+    return score;
+}
 
 /**
  * Rate the Movability including checks and stale situations.
@@ -101,11 +101,11 @@ function rateMovability(position, depth, playerTurn) {
 function evaluateBoard(currentPosition, depth, strategyName) {
     _monitor.startWatch('evaluateBoard');
     var score = ratePositionAndPieces(currentPosition, strategyName);
-    //score += rateKingSafety(currentPosition);
+    score += rateKingSafety(currentPosition);
     score += rateMovability(currentPosition, depth, true);
     currentPosition.turn = currentPosition.turn === 'W' ? 'B' : 'W';
     score -= ratePositionAndPieces(currentPosition, strategyName);
-    //score -= rateKingSafety(currentPosition);
+    score -= rateKingSafety(currentPosition);
     score -= rateMovability(currentPosition, depth, false);
     currentPosition.turn = currentPosition.turn === 'W' ? 'B' : 'W';
     _monitor.stopWatch('evaluateBoard');
