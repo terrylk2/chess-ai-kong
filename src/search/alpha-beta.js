@@ -1,11 +1,14 @@
 'use strict';
 
 var chessRules = require('chess-rules');
-var evaluator = require('./../evaluation/evaluator');
+var alphaBetaData = require('./alpha-beta-data');
+var AlphaBetaData = alphaBetaData.AlphaBetaData;
 var sorter = require('./quick-sort');
+var evaluatorMoves = require('./../evaluation/evaluator-moves');
+var evaluatorBoard = require('./../evaluation/evaluator-board');
 var _monitor = require('./../monitoring/monitoring');
 
-var aiDepth = 2;
+var aiDepth = 3;
 var aiTimeout = 10000;
 var aiStrategy = 'basic';
 
@@ -35,46 +38,11 @@ function setDepth(depth) {
 }
 
 /**
- * Evaluate each move based on the current position and depth.
- *
- * @param moves The array of available moves
- * @param position The current position
- * @param depth The current search depth
- * @returns {Array} The array of evaluated moves (pgn, move, value)
- */
-function evaluateMoves(moves, position, depth) {
-
-    _monitor.startWatch('evaluateMoves');
-    var evaluatedMoves = new Array(moves.length);
-
-    var i;
-    for (i = 0; i < moves.length; i++) {
-        var move = moves[i];
-        _monitor.startWatch('evaluateMoves-applyMove');
-        var tmpPosition = chessRules.applyMove(position, move);
-        _monitor.stopWatch('evaluateMoves-applyMove');
-        /**
-         * TODO: Fix the moves.length as it should be the number of available moves for the new position.
-         */
-        var value = evaluator.evaluateBoard(tmpPosition, moves.length, depth, aiStrategy);
-        evaluatedMoves[i] = {
-            pgn: chessRules.moveToPgn(position, move),
-            move: move,
-            value: value
-        };
-    }
-
-    _monitor.stopWatch('evaluateMoves');
-    return evaluatedMoves;
-}
-
-/**
  * Get the AI next move for the position passed in, this method follow the alpha beta max algorithm.
  * @param position The position and AI turn
  * @returns {*} The move
  */
 function getNextMove(position) {
-    //console.log('getNextMove ['+ position.turn + ']');
     _monitor.clear();
     _monitor.startWatch('getNextMove');
     _monitor.startWatch('setup');
@@ -82,14 +50,9 @@ function getNextMove(position) {
     var alpha = -1000000;
     var beta = 1000000;
     var bestMove = null;
+    var startTime = new Date().getTime();
 
     //Initialize the data for AlphaBeta Search
-    var alphaBetaData = {
-        lastMove: null,
-        moves: null,
-        path: 'root',
-        startTime: new Date().getTime()
-    };
     _monitor.stopWatch('setup');
 
     //Get the available moves
@@ -98,28 +61,32 @@ function getNextMove(position) {
     _monitor.stopWatch('availableMoves');
 
     //Evaluate the moves
-    var evaluatedMoves = evaluateMoves(availableMoves, position, aiDepth-1);
+    var evaluatedMoves = evaluatorMoves.evaluateMoves(availableMoves, position, aiStrategy);
 
     //Order moves to enhance pruning
-    alphaBetaData.moves = sorter.sortMoves(evaluatedMoves);
+    evaluatedMoves = sorter.sortMoves(evaluatedMoves);
 
-    alphaBetaData.moves.some(function (move) {
+    evaluatedMoves.some(function (move) {
 
+        var _path;
+        if(_monitor.isEnabled()) {
+            _monitor.startWatch('pgn');
+            _path = chessRules.moveToPgn(position, move.move);
+            _monitor.stopWatch('pgn');
+        }
         _monitor.startWatch('applyMove');
         var nextPosition = chessRules.applyMove(position, move.move);
         _monitor.stopWatch('applyMove');
-        alphaBetaData.lastMove = move;
-        alphaBetaData.path = move.pgn;
 
-        //console.log('-ROOT MOVE: ' + chessRules.moveToPgn(position, move));
-        //var score = alphaBetaMin(nextPosition, alpha, beta, aiDepth - 1, alphaBetaData);
-        var score = -alphaBeta(nextPosition, -beta, -alpha, aiDepth - 1, alphaBetaData);
-        _monitor.addSearchNode(move.pgn, alpha, beta, 0, score);
+        //var score = alphaBetaMin(nextPosition, alpha, beta, aiDepth - 1,
+        //    new AlphaBetaData(_pgn, startTime));
+        var score = -alphaBeta(nextPosition, -beta, -alpha, aiDepth - 1,
+            new AlphaBetaData(_path, startTime));
 
         //Use of alpha-beta max for the first step
         if(score >= beta) {
             //Cut-off
-            _monitor.addCutoffNode(alphaBetaData.path, alpha, beta, 0, score);
+            _monitor.addCutoffNode(_path, alpha, beta, 'max', score);
             alpha = beta;
             _monitor.stopWatch('return');
             return true;
@@ -129,15 +96,15 @@ function getNextMove(position) {
             //we have found a better best move (a new max)
             alpha = score;
             bestMove = move;
-            //console.log('New root best move: ' + bestMove.pgn);
         }
         _monitor.stopWatch('return');
         return false;
     });
 
     _monitor.stopWatch('getNextMove');
-    _monitor.dumpLogs(true);
-    return bestMove == null ? null : bestMove.pgn;
+    _monitor.dumpLogs(true, true);
+    console.log(chessRules.moveToPgn(position,  bestMove.move));
+    return bestMove == null ? null : chessRules.moveToPgn(position,  bestMove.move);
 }
 
 function isTerminal(position) {
@@ -156,8 +123,6 @@ function isTerminal(position) {
  */
 function alphaBeta(position, alpha, beta, depth, alphaBetaData) {
 
-    var path = alphaBetaData.path;
-
     if(depth == 0
         || new Date().getTime() - alphaBetaData.startTime > aiTimeout*0.98-200
         || isTerminal(position)) {
@@ -166,8 +131,9 @@ function alphaBeta(position, alpha, beta, depth, alphaBetaData) {
          * TODO: Enhance with Quiescence algorithm.
          */
         _monitor.startWatch('return');
-        //Move has already been evaluated by the sort algorithm in the previous run
-        return alphaBetaData.lastMove.value;
+        var score = evaluatorBoard.evaluateBoard(position, depth, aiStrategy);
+        _monitor.addSearchNode(alphaBetaData.path, alpha, beta, (aiDepth-depth)%2==0?'max':'min', score);
+        return score;
     }
 
     //Get the available moves
@@ -176,27 +142,28 @@ function alphaBeta(position, alpha, beta, depth, alphaBetaData) {
     _monitor.stopWatch('availableMoves');
 
     //Evaluate the moves
-    var evaluatedMoves = evaluateMoves(availableMoves, position, depth);
+    var evaluatedMoves = evaluatorMoves.evaluateMoves(availableMoves, position, aiStrategy);
 
     //Order moves to enhance pruning
-    alphaBetaData.moves = sorter.sortMoves(evaluatedMoves);
+    evaluatedMoves = sorter.sortMoves(evaluatedMoves);
 
-    alphaBetaData.moves.some(function (move) {
+    evaluatedMoves.some(function (move) {
 
+        var _path;
+        if(_monitor.isEnabled()) {
+            _monitor.startWatch('pgn');
+            _path = chessRules.moveToPgn(position, move.move);
+            _monitor.stopWatch('pgn');
+        }
         _monitor.startWatch('applyMove');
         var nextPosition = chessRules.applyMove(position, move.move);
         _monitor.stopWatch('applyMove');
 
-        //Update alphaBeta data to pass on
-        alphaBetaData.lastMove = move;
-        alphaBetaData.path = path + '-' + move.pgn;
-
-        var score = -alphaBeta(nextPosition, -beta, -alpha, depth - 1, alphaBetaData);
-        _monitor.addSearchNode(path + '-' + move.pgn, alpha, beta, aiDepth-depth, score);
+        var score = -alphaBeta(nextPosition, -beta, -alpha, depth - 1, alphaBetaData.next(_path));
 
         //Cut off
         if (score >= beta) {
-            _monitor.addCutoffNode(path + '-' + move.pgn, alpha, beta, aiDepth-depth, score);
+            _monitor.addCutoffNode(alphaBetaData.path, alpha, beta, (aiDepth-depth)%2==0?'max':'min', score);
             alpha = beta;
             _monitor.stopWatch('return');
             return true;
@@ -209,7 +176,7 @@ function alphaBeta(position, alpha, beta, depth, alphaBetaData) {
         _monitor.stopWatch('return');
         return false;
     });
-
+    _monitor.addSearchNode(alphaBetaData.path, alpha, beta, (aiDepth-depth)%2==0?'max':'min', alpha);
     return alpha;
 }
 

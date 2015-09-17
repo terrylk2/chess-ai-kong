@@ -4,7 +4,6 @@ var aiSearch = require('./search/alpha-beta');
 var chessRules = require('chess-rules');
 
 aiSearch.setStrategy('basic');
-aiSearch.setDepth(2);
 
 /**
  * Get the next move from the current status of the game.

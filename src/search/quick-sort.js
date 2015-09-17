@@ -10,9 +10,9 @@ var _monitor = require('./../monitoring/monitoring');
 function sortMoves(evaluatedMoves) {
 
     _monitor.startWatch('sortMoves');
-    var evaluatedMoves = quickSort(evaluatedMoves, 0, evaluatedMoves.length-1);
+    var resultMoves = quickSort(evaluatedMoves, 0, evaluatedMoves.length-1);
     _monitor.stopWatch('sortMoves');
-    return evaluatedMoves;
+    return resultMoves;
 }
 
 function quickSort(fullMoves, lowInd, highInd) {
@@ -22,11 +22,11 @@ function quickSort(fullMoves, lowInd, highInd) {
     var pivot = checkValue(fullMoves[lowInd + Math.floor((highInd - lowInd) / 2)]);
 
     while (i <= j) {
-        while(checkValue(fullMoves[i]) < pivot) {
+        while(checkValue(fullMoves[i]) > pivot) {
             i++;
         }
 
-        while(checkValue(fullMoves[j]) > pivot) {
+        while(checkValue(fullMoves[j]) < pivot) {
             j--;
         }
 
