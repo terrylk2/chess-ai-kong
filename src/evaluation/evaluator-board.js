@@ -3,11 +3,11 @@
 var strategy = require('./strategy');
 var _monitor = require('./../monitoring/monitoring');
 
-var castlingRate = 40;
+//var castlingRate = 40;
 var checkRate = 100;
-var checkMateRate = 200000;
-var staleMateRate = 150000;
-var movabilityRate = 5;
+//var checkMateRate = 200000;
+//var staleMateRate = 150000;
+//var movabilityRate = 5;
 
 /**
  * Evaluate the current position for the current player (turn).
@@ -31,46 +31,45 @@ function ratePositionAndPieces(position, strategyName) {
     return score;
 }
 
-/**
- * Rate the defense (castlings).
- *
- * @param position The current position and turn
- * @returns {number} The score (regarding the strategy currently set)
- */
-function rateKingSafety(position) {
-
-    var score = 0;
-
-    /**
-     * TODO: increase the score for castled kings.
-     */
-    //Castlings: if castled, increase the score
-    //if(castled) {
-    //    score += castlingRate;
-    //} else {
-        //Castlings: if castling is not possible anymore, reduce the score
-        if(!position.castlingFlags[position.turn].K) {
-            score -= castlingRate;
-        }
-
-        if(!position.castlingFlags[position.turn].Q) {
-            score -= castlingRate;
-        }
-    //}
-
-    return score;
-}
+///**
+// * Rate the defense (castlings).
+// *
+// * @param position The current position and turn
+// * @returns {number} The score (regarding the strategy currently set)
+// */
+//function rateKingSafety(position) {
+//
+//    var score = 0;
+//
+//    /**
+//     * TODO: increase the score for castled kings.
+//     */
+//    //Castlings: if castled, increase the score
+//    //if(castled) {
+//    //    score += castlingRate;
+//    //} else {
+//        //Castlings: if castling is not possible anymore, reduce the score
+//        if(!position.castlingFlags[position.turn].K) {
+//            score -= castlingRate;
+//        }
+//
+//        if(!position.castlingFlags[position.turn].Q) {
+//            score -= castlingRate;
+//        }
+//    //}
+//
+//    return score;
+//}
 
 /**
  * Rate the Movability including checks and stale situations.
  *
  * @param position The current position and turn
- * @param movesLength The number of available moves
  * @param depth The depth in the search algorithm
  * @param playerTurn True if the function is called to rate the player's turn, false if opponent
  * @returns {number} The score (regarding the strategy currently set)
  */
-function rateMovability(position, movesLength, depth, playerTurn) {
+function rateMovability(position, depth, playerTurn) {
 
     var score = 0;
 
@@ -94,21 +93,20 @@ function rateMovability(position, movesLength, depth, playerTurn) {
 /**
  * Evaluate the board for the current player (turn).
  *
- * @param moveLength The number of moves
  * @param currentPosition The current position and turn
  * @param depth the depth in the search algorithm
  * @param strategyName The name of the strategy to use
  * @returns {number} The score (regarding the strategy currently set)
  */
-function evaluateBoard(currentPosition, moveLength, depth, strategyName) {
+function evaluateBoard(currentPosition, depth, strategyName) {
     _monitor.startWatch('evaluateBoard');
     var score = ratePositionAndPieces(currentPosition, strategyName);
     //score += rateKingSafety(currentPosition);
-    score += rateMovability(currentPosition, moveLength, depth, true);
+    score += rateMovability(currentPosition, depth, true);
     currentPosition.turn = currentPosition.turn === 'W' ? 'B' : 'W';
     score -= ratePositionAndPieces(currentPosition, strategyName);
     //score -= rateKingSafety(currentPosition);
-    score -= rateMovability(currentPosition, moveLength, depth, false);
+    score -= rateMovability(currentPosition, depth, false);
     currentPosition.turn = currentPosition.turn === 'W' ? 'B' : 'W';
     _monitor.stopWatch('evaluateBoard');
     return score;
