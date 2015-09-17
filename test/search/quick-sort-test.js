@@ -36,7 +36,7 @@ describe('quick-sort', function () {
 
         var i;
         for (i = 0; i < moves.length - 1; i++) {
-            assert(evaluatedMoves[i].value <= evaluatedMoves[i + 1].value);
+            assert(evaluatedMoves[i].value >= evaluatedMoves[i + 1].value);
         }
     });
 
@@ -47,7 +47,7 @@ describe('quick-sort', function () {
 
         var i;
         for (i = 0; i < moves.length - 1; i++) {
-            assert(evaluatedMoves[i].value <= evaluatedMoves[i + 1].value);
+            assert(evaluatedMoves[i].value >= evaluatedMoves[i + 1].value);
         }
     });
 

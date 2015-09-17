@@ -103,7 +103,6 @@ function getNextMove(position) {
 
     _monitor.stopWatch('getNextMove');
     _monitor.dumpLogs(true, true);
-    console.log(chessRules.moveToPgn(position,  bestMove.move));
     return bestMove == null ? null : chessRules.moveToPgn(position,  bestMove.move);
 }
 
