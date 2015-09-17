@@ -6,7 +6,7 @@ var nbNodeSearched = 0;
 var nbCutoffs = 0;
 
 var watches = require('./watches');
-var enabled = false;
+var enabled = true;
 
 function setEnabled(enabledFlag) {
     enabled = enabledFlag;
@@ -18,32 +18,20 @@ function setEnabled(enabledFlag) {
  * @param path The node path
  * @param alpha The alpha
  * @param beta The beta
- * @param depth The current depth of the search (0 being the first step)
+ * @param type The type of search (Maximizing or Minimizing)
  * @param score The score
  */
-function addCutoffNode(path, alpha, beta, depth, score) {
+function addCutoffNode(path, alpha, beta, type, score) {
     if(enabled) {
-        if(depth%2==1) {
-            cutoffs.push(
-                {
-                    path: path,
-                    alpha: -beta,
-                    beta: -alpha,
-                    depth: depth,
-                    score: -score
-                }
-            );
-        } else {
-            cutoffs.push(
-                {
-                    path: path,
-                    alpha: alpha,
-                    beta: beta,
-                    depth: depth,
-                    score: score
-                }
-            );
-        }
+        cutoffs.push(
+            {
+                path: path,
+                alpha: alpha,
+                beta: beta,
+                type: type,
+                score: score
+            }
+        );
     }
 }
 
@@ -54,37 +42,25 @@ function addCutoffNode(path, alpha, beta, depth, score) {
  * @param path The node path
  * @param alpha The alpha
  * @param beta The beta
- * @param depth The current depth of the search (0 being the first step)
+ * @param type The type (min or max)
  * @param score The score
  */
-function addSearchNode(path, alpha, beta, depth, score) {
+function addSearchNode(path, alpha, beta, type, score) {
     if(enabled) {
-        if(depth%2 == 1) {
-            consoleTree.push(
-                {
-                    path: path,
-                    alpha: -beta,
-                    beta: -alpha,
-                    depth: depth,
-                    score: -score
-                }
-            );
-        } else {
-            consoleTree.push(
-                {
-                    path: path,
-                    alpha: alpha,
-                    beta: beta,
-                    depth: depth,
-                    score: score
-                }
-            );
-        }
+        consoleTree.push(
+            {
+                path: path,
+                alpha: alpha,
+                beta: beta,
+                type: type,
+                score: score
+            }
+        );
     }
 }
 
 /**
- * Start the watch. If the watch does not exist, iy is created.
+ * Start the watch. If the watch does not exist, it is created.
  *
  * @param itemKey The watch key
  */
@@ -135,7 +111,13 @@ function clear() {
     }
 }
 
-function dumpLogs(full) {
+/**
+ * Print logs monitored logs in the console.
+ *
+ * @param full true to dump the full logs.
+ * @param string true to dump logs as String, false to dump objects
+ */
+function dumpLogs(full, string) {
     if (enabled) {
 
         console.log(consoleTree.length + ' node searched');
@@ -145,35 +127,40 @@ function dumpLogs(full) {
         watches.dumpLogs();
 
         if(full) {
-            var strings;
-            if (cutoffs.length > 0) {
-                strings = ['--CUTOFFS--'];
-                cutoffs.forEach(function (cutoff) {
-                    strings.push('\n');
-                    strings.push('{'
-                        + 'path: ' + cutoff.path
-                        + ', type: ' + (cutoff.depth % 2 === 1 ? 'min' : 'max')
-                        + ', alpha: ' + cutoff.alpha
-                        + ', beta: ' + cutoff.beta
-                        + ', score: ' + cutoff.score
-                        + '}');
-                });
-                console.log(strings.join(''));
-            }
+            if (string) {
+                console.log(consoleTree);
+                console.log(cutoffs);
+            } else {
+                var strings;
+                if (cutoffs.length > 0) {
+                    strings = ['--CUTOFFS--'];
+                    cutoffs.forEach(function (cutoff) {
+                        strings.push('\n');
+                        strings.push('{'
+                            + 'path: ' + cutoff.path
+                            + ', type: ' + cutoff.type
+                            + ', alpha: ' + cutoff.alpha
+                            + ', beta: ' + cutoff.beta
+                            + ', score: ' + cutoff.score
+                            + '}');
+                    });
+                    console.log(strings.join(''));
+                }
 
-            if (consoleTree.length > 0) {
-                strings = ['--TREE--'];
-                consoleTree.forEach(function (node) {
-                    strings.push('\n');
-                    strings.push('{'
-                        + 'path: ' + node.path
-                        + ', type: ' + (node.depth % 2 === 1 ? 'min' : 'max')
-                        + ', alpha: ' + node.alpha
-                        + ', beta: ' + node.beta
-                        + ', score: ' + node.score
-                        + '}');
-                });
-                console.log(strings.join(''));
+                if (consoleTree.length > 0) {
+                    strings = ['--TREE--'];
+                    consoleTree.forEach(function (node) {
+                        strings.push('\n');
+                        strings.push('{'
+                            + 'path: ' + node.path
+                            + ', type: ' + node.type
+                            + ', alpha: ' + node.alpha
+                            + ', beta: ' + node.beta
+                            + ', score: ' + node.score
+                            + '}');
+                    });
+                    console.log(strings.join(''));
+                }
             }
         }
     }
