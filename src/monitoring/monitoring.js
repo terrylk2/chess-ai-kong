@@ -6,7 +6,11 @@ var nbNodeSearched = 0;
 var nbCutoffs = 0;
 
 var watches = require('./watches');
-var enabled = true;
+var enabled = false;
+
+function isEnabled() {
+    return enabled;
+}
 
 function setEnabled(enabledFlag) {
     enabled = enabledFlag;
@@ -128,9 +132,6 @@ function dumpLogs(full, string) {
 
         if(full) {
             if (string) {
-                console.log(consoleTree);
-                console.log(cutoffs);
-            } else {
                 var strings;
                 if (cutoffs.length > 0) {
                     strings = ['--CUTOFFS--'];
@@ -161,6 +162,9 @@ function dumpLogs(full, string) {
                     });
                     console.log(strings.join(''));
                 }
+            } else {
+                console.log(consoleTree);
+                console.log(cutoffs);
             }
         }
     }
@@ -169,6 +173,7 @@ function dumpLogs(full, string) {
 module.exports.addSearchNode = addSearchNode;
 module.exports.addCutoffNode = addCutoffNode;
 module.exports.setEnabled = setEnabled;
+module.exports.isEnabled = isEnabled;
 module.exports.startWatch = startWatch;
 module.exports.stopWatch = stopWatch;
 module.exports.dumpLogs = dumpLogs;
