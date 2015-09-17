@@ -3,8 +3,8 @@
 var strategy = require('./strategy');
 var _monitor = require('./../monitoring/monitoring');
 
-var castlingRate = 100;
-var checkRate = 75;
+var castlingRate = 40;
+var checkRate = 100;
 var checkMateRate = 200000;
 var staleMateRate = 150000;
 var movabilityRate = 5;
@@ -37,19 +37,26 @@ function ratePositionAndPieces(position, strategyName) {
  * @param position The current position and turn
  * @returns {number} The score (regarding the strategy currently set)
  */
-function rateDefense(position) {
+function rateKingSafety(position) {
 
     var score = 0;
-    var player = position.turn;
-    var opponent = position.turn === 'W' ? 'B' : 'W';
 
-    //Castlings
-    if(!position.castlingFlags[player].K || !position.castlingFlags[player].Q) {
-        score += castlingRate;
-    }
-    if(!position.castlingFlags[opponent].K || !position.castlingFlags[opponent].Q) {
-        score -= castlingRate;
-    }
+    /**
+     * TODO: increase the score for castled kings.
+     */
+    //Castlings: if castled, increase the score
+    //if(castled) {
+    //    score += castlingRate;
+    //} else {
+        //Castlings: if castling is not possible anymore, reduce the score
+        if(!position.castlingFlags[position.turn].K) {
+            score -= castlingRate;
+        }
+
+        if(!position.castlingFlags[position.turn].Q) {
+            score -= castlingRate;
+        }
+    //}
 
     return score;
 }
@@ -67,16 +74,17 @@ function rateMovability(position, movesLength, depth, playerTurn) {
 
     var score = 0;
 
-    score += movesLength*movabilityRate;
+    //score += movesLength*movabilityRate;
     if(playerTurn) {
-        if (movesLength == 0) {
-            if (position.check) {
-                score -= checkMateRate * depth;
-            } else {
-                score -= staleMateRate * depth;
-            }
-        } else if (position.check) {
-            score -= checkRate * depth;
+        //if (movesLength == 0) {
+        //    if (position.check) {
+        //        score -= checkMateRate * (depth+1);
+        //    } else {
+        //        score -= staleMateRate * (depth+1);
+        //    }
+        //} else
+        if (position.check) {
+            score -= checkRate * (depth+1);
         }
     }
 
@@ -95,11 +103,11 @@ function rateMovability(position, movesLength, depth, playerTurn) {
 function evaluateBoard(currentPosition, moveLength, depth, strategyName) {
     _monitor.startWatch('evaluateBoard');
     var score = ratePositionAndPieces(currentPosition, strategyName);
-    score += rateDefense(currentPosition);
+    //score += rateKingSafety(currentPosition);
     score += rateMovability(currentPosition, moveLength, depth, true);
     currentPosition.turn = currentPosition.turn === 'W' ? 'B' : 'W';
     score -= ratePositionAndPieces(currentPosition, strategyName);
-    score -= rateDefense(currentPosition);
+    //score -= rateKingSafety(currentPosition);
     score -= rateMovability(currentPosition, moveLength, depth, false);
     currentPosition.turn = currentPosition.turn === 'W' ? 'B' : 'W';
     _monitor.stopWatch('evaluateBoard');
