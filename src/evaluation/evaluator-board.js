@@ -3,6 +3,7 @@
 var strategy = require('./strategy');
 var _monitor = require('./../monitoring/monitoring');
 
+//Settings
 var castlingRate = 40;
 var checkRate = 100;
 //var checkMateRate = 200000;

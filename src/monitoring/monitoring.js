@@ -4,8 +4,9 @@ var cutoffs = [];
 var consoleTree = [];
 var nbNodeSearched = 0;
 var nbCutoffs = 0;
-
 var watches = require('./watches');
+
+//Settings
 var enabled = false;
 
 function isEnabled() {
@@ -13,7 +14,11 @@ function isEnabled() {
 }
 
 function setEnabled(enabledFlag) {
-    enabled = enabledFlag;
+    if(enabledFlag === undefined || typeof enabledFlag !== 'boolean') {
+        throw new Error('monitor value type!');
+    } else {
+        enabled = enabledFlag;
+    }
 }
 
 /**
