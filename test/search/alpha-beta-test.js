@@ -244,7 +244,6 @@ describe('alpha-beta', function () {
             var before = new Date().getTime();
             var move = alphaBeta.getNextMove(position);
             var getNextMoveTime = new Date().getTime() - before;
-            console.log('getNextMoveTime: ' + getNextMoveTime);
 
             assert(move !== null);
             assert(getNextMoveTime <= 10500);
