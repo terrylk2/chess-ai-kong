@@ -58,7 +58,6 @@ function setOptions(options) {
 function playPosition(position) {
 
     var aiMove = aiSearch.getNextMove(position);
-    console.log('AI play: ' + chessRules.moveToPgn(position,  aiMove));
     return aiMove == null ? null : chessRules.moveToPgn(position,  aiMove);
 }
 

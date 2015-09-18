@@ -117,7 +117,7 @@ function getNextMove(position) {
     });
 
     _monitor.stopWatch('getNextMove');
-    _monitor.dumpLogs(true, true);
+    _monitor.dumpLogs(true, false);
     return bestMove == null ? null : bestMove.move;
 }
 

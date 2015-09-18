@@ -3567,6 +3567,7 @@ process.umask = function() { return 0; };
 var strategy = require('./strategy');
 var _monitor = require('./../monitoring/monitoring');
 
+//Settings
 var castlingRate = 40;
 var checkRate = 100;
 //var checkMateRate = 200000;
@@ -4032,10 +4033,54 @@ module.exports.getPieceScore = getPieceScore;
 },{"./strategies/basic":27,"./strategies/random":28}],30:[function(require,module,exports){
 'use strict';
 
-var aiSearch = require('./search/alpha-beta');
 var chessRules = require('chess-rules');
+var aiSearch = require('./search/alpha-beta');
+var _monitor = require('./monitoring/monitoring');
 
-aiSearch.setStrategy('basic');
+// Defaults options
+var defaults = {
+    depth: 3,                  // Depth of the search algorithm
+    monitor: false,            // Enable/Disable the monitoring
+    strategy: 'basic' ,        // Strategy to use, 'basic' as default
+    timeout: 10000             // Timeout after which the AI returns a move
+};
+
+/**
+ * Merge options arrays passed in.
+ */
+function mergeOptions(options) {
+    for (var i=1; i < arguments.length; i++) {
+        var def = arguments[i];
+        for (var n in def) {
+            if (options[n] === undefined) {
+                options[n] = def[n];
+            }
+        }
+    }
+    return options;
+}
+
+/**
+ * Apply the options passed in argument.
+ *
+ * @param options The options as an array of objects
+ */
+function refreshOptions(options) {
+    aiSearch.setTimeout(options.timeout);
+    aiSearch.setDepth(options.depth);
+    aiSearch.setStrategy(options.strategy);
+    _monitor.setEnabled(options.monitor);
+}
+
+/**
+ * Set the AI options including search Depth, timeout and monitoring.
+ *
+ * @param options The options as an array of objects
+ */
+function setOptions(options) {
+    var opts = mergeOptions(options || {}, defaults);
+    refreshOptions(opts);
+}
 
 /**
  * Get the next move from the current status of the game.
@@ -4045,7 +4090,8 @@ aiSearch.setStrategy('basic');
  */
 function playPosition(position) {
 
-    return aiSearch.getNextMove(position);
+    var aiMove = aiSearch.getNextMove(position);
+    return aiMove == null ? null : chessRules.moveToPgn(position,  aiMove);
 }
 
 /**
@@ -4065,18 +4111,22 @@ function playMoves(pgnMoves) {
     return playPosition(position);
 }
 
+refreshOptions(defaults);
+
+module.exports.setOptions = setOptions;
 module.exports.play = playMoves;
 module.exports.playPosition = playPosition;
 
-},{"./search/alpha-beta":35,"chess-rules":23}],31:[function(require,module,exports){
+},{"./monitoring/monitoring":31,"./search/alpha-beta":35,"chess-rules":23}],31:[function(require,module,exports){
 'use strict';
 
 var cutoffs = [];
 var consoleTree = [];
 var nbNodeSearched = 0;
 var nbCutoffs = 0;
-
 var watches = require('./watches');
+
+//Settings
 var enabled = false;
 
 function isEnabled() {
@@ -4084,7 +4134,11 @@ function isEnabled() {
 }
 
 function setEnabled(enabledFlag) {
-    enabled = enabledFlag;
+    if(enabledFlag === undefined || typeof enabledFlag !== 'boolean') {
+        throw new Error('monitor value type!');
+    } else {
+        enabled = enabledFlag;
+    }
 }
 
 /**
@@ -4418,13 +4472,16 @@ module.exports = {
 'use strict';
 
 var chessRules = require('chess-rules');
+//Search
 var alphaBetaData = require('./alpha-beta-data');
 var AlphaBetaData = alphaBetaData.AlphaBetaData;
 var sorter = require('./quick-sort');
+//Evaluation
 var evaluatorMoves = require('./../evaluation/evaluator-moves');
 var evaluatorBoard = require('./../evaluation/evaluator-board');
+//Monitoring
 var _monitor = require('./../monitoring/monitoring');
-
+//Settings
 var aiDepth = 3;
 var aiTimeout = 10000;
 var aiStrategy = 'basic';
@@ -4435,7 +4492,11 @@ var aiStrategy = 'basic';
  * @param timeout The timeout in millisecond
  */
 function setTimeout(timeout) {
-    aiTimeout = timeout;
+    if(timeout === undefined || typeof timeout != 'number' || timeout%1 != 0) {
+        throw new Error('timeout value type!');
+    } else {
+        aiTimeout = timeout;
+    }
 }
 
 /**
@@ -4443,7 +4504,11 @@ function setTimeout(timeout) {
  * @param strategyName The strategy name ('basic' by default, 'random')
  */
 function setStrategy(strategyName) {
-    aiStrategy = strategyName;
+    if(strategyName === undefined || typeof strategyName !== 'string') {
+        throw new Error('strategy value type!');
+    } else {
+        aiStrategy = strategyName;
+    }
 }
 
 /**
@@ -4451,7 +4516,11 @@ function setStrategy(strategyName) {
  * @param depth The depth (2 by default)
  */
 function setDepth(depth) {
-    aiDepth = depth;
+    if(depth === undefined || typeof depth != 'number' || depth%1 != 0) {
+        throw new Error('depth value type!');
+    } else {
+        aiDepth = depth;
+    }
 }
 
 /**
@@ -4519,8 +4588,8 @@ function getNextMove(position) {
     });
 
     _monitor.stopWatch('getNextMove');
-    _monitor.dumpLogs(true, true);
-    return bestMove == null ? null : chessRules.moveToPgn(position,  bestMove.move);
+    _monitor.dumpLogs(true, false);
+    return bestMove == null ? null : bestMove.move;
 }
 
 function isTerminal(position) {
